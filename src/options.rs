@@ -145,10 +145,11 @@ pub struct Options {
     ///
     /// Default: `Libdeflater`
     pub deflater: Deflater,
-    /// Whether to use fast evaluation to pick the best filter
+    /// The maximum number of main compression trials to run
     ///
-    /// Default: `true`
-    pub fast_evaluation: bool,
+    /// Default: `1`
+    pub max_trials: usize,
+    pub candidate_threshold: f64,
     /// Maximum amount of time to spend on optimizations.
     /// Further potential optimizations are skipped if the timeout is exceeded.
     ///
@@ -221,6 +222,8 @@ impl Options {
                 level: 1,
             },
         };
+        self.max_trials = 2;
+        self.candidate_threshold = 0.05;
         self
     }
 
@@ -237,11 +240,12 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 4;
+        self.candidate_threshold = 0.05;
         self
     }
 
     fn apply_preset_5(mut self) -> Self {
-        self.fast_evaluation = false;
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
@@ -254,11 +258,12 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 8;
+        self.candidate_threshold = 0.1;
         self
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.fast_evaluation = false;
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
@@ -275,6 +280,8 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 16;
+        self.candidate_threshold = 0.2;
         self
     }
 }
@@ -301,7 +308,8 @@ impl Default for Options {
             scale_16: false,
             strip: StripChunks::None,
             deflater: Deflater::Libdeflater { compression: 11 },
-            fast_evaluation: true,
+            max_trials: 1,
+            candidate_threshold: 0.0,
             timeout: None,
             max_decompressed_size: None,
         }

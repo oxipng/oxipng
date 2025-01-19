@@ -263,14 +263,11 @@ The default value depends on the optimization level preset.")
                 .value_name("list"),
         )
         .arg(
-            Arg::new("fast")
-                .help("Use fast filter evaluation")
-                .long_help("\
-Perform a fast compression evaluation of each enabled filter, followed by a single main \
-compression trial of the best result. Note that this is enabled by default and will only \
-be disabled at level 5 or above.")
-                .long("fast")
-                .action(ArgAction::SetTrue),
+            Arg::new("max-trials")
+                .help("Maximum number of main compression trials to run")
+                .long("max-trials")
+                .value_name("num")
+                .value_parser(value_parser!(usize))
         )
         .arg(
             Arg::new("compression")
