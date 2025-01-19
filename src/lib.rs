@@ -21,6 +21,7 @@ pub use indexmap::{IndexSet, indexset};
 use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 pub use rgb::{RGB16, RGBA8};
+use rustc_hash::FxHashMap;
 
 #[cfg(feature = "zopfli")]
 pub use crate::deflate::ZopfliOptions;
@@ -318,7 +319,7 @@ fn optimize_png(
         "    {}x{} pixels, PNG format",
         raw.ihdr.width, raw.ihdr.height
     );
-    report_format("    ", &raw);
+    report_format(&raw, &raw.ihdr.color_type.to_string());
     debug!("    IDAT size = {idat_original_size} bytes");
     debug!("    File size = {file_original_size} bytes");
 
@@ -387,6 +388,8 @@ fn optimize_raw(
     deadline: Arc<Deadline>,
     max_size: Option<usize>,
 ) -> Option<Candidate> {
+    // Phase 1: Transformation evaluations
+
     // Libdeflate has four algorithms: 0 = 'uncompressed', 1-4 = 'greedy', 5-7 = 'lazy', 8-9 = 'lazy2', 10-12 = 'near-optimal'
     // 5 is the minimumm required for a decent evaluation result (o0 and o1)
     // 7 is only slightly slower than 5 and improves evaluation of filters in 'fast' mode (o2)
@@ -406,122 +409,111 @@ fn optimize_raw(
         // None and Bigrams work well together, especially for alpha reductions
         indexset! {FilterStrategy::NONE, FilterStrategy::Bigrams}
     };
+    // If phase 3 is not needed, we need to retain the IDAT in the evaluation phases instead
+    let do_phase_3 = opts.max_trials > 0 && opts.deflater != eval_deflater;
     // This will collect all versions of images and pick one that compresses best
     let eval = Evaluator::new(
         deadline.clone(),
         eval_filters.clone(),
         eval_deflater,
         false,
-        opts.deflater == eval_deflater,
+        opts.tolerance,
+        !do_phase_3,
     );
-    let mut new_image = perform_reductions(image.clone(), opts, &deadline, &eval);
-    let eval_result = eval.get_best_candidate();
-    if let Some(ref result) = eval_result {
-        new_image = result.image.clone();
-    }
-    let reduction_occurred = new_image.ihdr.color_type != image.ihdr.color_type
-        || new_image.ihdr.bit_depth != image.ihdr.bit_depth
-        || new_image.ihdr.interlaced != image.ihdr.interlaced;
+    let new_image = perform_reductions(image.clone(), opts, &deadline, &eval);
+    let mut candidates = eval.get_candidates();
 
-    if reduction_occurred {
-        report_format("Transformed image to ", &new_image);
+    // Return early if idat recoding is off and no transformations occurred
+    if !opts.idat_recoding && candidates.is_empty() && new_image.is_same_format(&image) {
+        return None;
     }
 
-    let (result, deflater) = if opts.idat_recoding || reduction_occurred {
-        let result = perform_trials(
-            new_image,
-            opts,
-            deadline,
-            max_size,
-            eval_result,
-            eval_filters,
+    // Phase 2: Filter evaluations
+
+    let mut filters = opts.filters.clone();
+    if !candidates.is_empty() {
+        // Some filters have already been evaluated, we don't need to try them again
+        filters = filters.difference(&eval_filters).cloned().collect();
+    }
+
+    if !filters.is_empty() && !deadline.passed() {
+        // Evaluate the remaining filters
+        let eval = Evaluator::new(
+            deadline.clone(),
+            filters.clone(),
             eval_deflater,
+            opts.optimize_alpha,
+            opts.tolerance,
+            !do_phase_3,
         );
-        (result?, opts.deflater)
+        if candidates.is_empty() {
+            trace!("Evaluating {} filters", filters.len());
+            eval.try_image(new_image, 0);
+        } else {
+            // The results could include multiple filter evaluations of the same image
+            // Filter out duplicates based on their `nth` value
+            let distinct = candidates
+                .iter()
+                .take(opts.max_trials.max(1))
+                .map(|c| (c.nth, c))
+                .collect::<FxHashMap<_, _>>();
+            trace!(
+                "Evaluating {} filters for {} candidates",
+                filters.len(),
+                distinct.len()
+            );
+            for (nth, candidate) in distinct {
+                eval.try_image_with_name(candidate.image.clone(), nth, &candidate.name);
+            }
+            eval.inject_candidates(candidates);
+        }
+        candidates = eval.get_candidates();
+    }
+
+    // Phase 3: Main compression trials
+
+    let result = if do_phase_3 && !deadline.passed() {
+        // Collect distinct candidates up to max_trials
+        // Filter out duplicates where the filter strategy chose the same row filters as a previous one
+        let mut distinct: Vec<Candidate> = Vec::new();
+        for a in candidates {
+            if distinct.len() < opts.max_trials
+                && !distinct.iter().any(|b| {
+                    a.nth == b.nth
+                        && a.estimated_output_size == b.estimated_output_size
+                        && a.filter_used.matches(&b.filter_used)
+                })
+            {
+                distinct.push(a);
+            }
+        }
+        debug!(
+            "Compressing {} candidates with {}",
+            distinct.len(),
+            opts.deflater
+        );
+        Evaluator::recompress_candidates(
+            distinct,
+            deadline,
+            opts.deflater,
+            opts.optimize_alpha,
+            max_size,
+        )?
     } else {
-        // If idat_recoding is off and reductions were attempted but ended up choosing the baseline,
-        // we should still check if the evaluator compressed the baseline smaller than the original.
-        (eval_result?, eval_deflater)
+        candidates.into_iter().next()?
     };
 
     if result.idat_data.is_some()
         && max_size.is_none_or(|max_size| result.estimated_output_size < max_size)
     {
         debug!("Found better result:");
-        debug!("    {}, f = {}", deflater, result.filter);
+        if !result.image.is_same_format(&image) {
+            report_format(&result.image, &result.name);
+        }
+        debug!("    {}, f = {}", opts.deflater, result.filter);
         return Some(result);
     }
     None
-}
-
-/// Perform compression trials
-fn perform_trials(
-    image: Arc<PngImage>,
-    opts: &Options,
-    deadline: Arc<Deadline>,
-    max_size: Option<usize>,
-    mut eval_result: Option<Candidate>,
-    eval_filters: IndexSet<FilterStrategy>,
-    eval_deflater: Deflater,
-) -> Option<Candidate> {
-    let mut filters = opts.filters.clone();
-    let fast_eval = opts.fast_evaluation && (filters.len() > 1 || eval_result.is_some());
-    if fast_eval {
-        // Perform a fast evaluation of selected filters followed by a single main compression trial
-
-        if eval_result.is_some() {
-            // Some filters have already been evaluated, we don't need to try them again
-            filters = filters.difference(&eval_filters).cloned().collect();
-        }
-
-        if !filters.is_empty() {
-            trace!("Evaluating {} filters", filters.len());
-            let eval = Evaluator::new(
-                deadline,
-                filters,
-                eval_deflater,
-                opts.optimize_alpha,
-                opts.deflater == eval_deflater,
-            );
-            if let Some(result) = &eval_result {
-                eval.set_best_size(result.estimated_output_size);
-            }
-            eval.try_image(image.clone());
-            if let Some(result) = eval.get_best_candidate() {
-                eval_result = Some(result);
-            }
-        }
-
-        // We should have a result here - fail if not (e.g. deadline passed)
-        let mut result = eval_result?;
-
-        if result.idat_data.is_none() {
-            // Compress with the main deflater
-            debug!("Trying filter {} with {}", result.filter, opts.deflater);
-            let (data, _) = image.filter_image(result.filter_used.clone(), opts.optimize_alpha);
-            match opts.deflater.deflate(&data, max_size) {
-                Ok(idat_data) => {
-                    result.estimated_output_size = result.image.estimated_output_size(&idat_data);
-                    result.idat_data = Some(idat_data);
-                    trace!("{} bytes", result.estimated_output_size);
-                }
-                Err(PngError::DeflatedDataTooLong(bytes)) => {
-                    trace!(">{bytes} bytes");
-                }
-                Err(_) => (),
-            }
-        }
-        return Some(result);
-    }
-
-    // Perform full compression trials of selected filters and determine the best
-    debug!("Trying {} filters with {}", filters.len(), opts.deflater);
-    let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
-    if let Some(max_size) = max_size {
-        eval.set_best_size(max_size);
-    }
-    eval.try_image(image);
-    eval.get_best_candidate()
 }
 
 #[derive(Debug)]
@@ -575,15 +567,15 @@ impl Deadline {
 }
 
 /// Display the format of the image data
-fn report_format(prefix: &str, png: &PngImage) {
+fn report_format(png: &PngImage, color_type: &str) {
     let interlaced = if png.ihdr.interlaced {
         "interlaced"
     } else {
         "non-interlaced"
     };
     debug!(
-        "{}{}-bit {}, {}",
-        prefix, png.ihdr.bit_depth, png.ihdr.color_type, interlaced
+        "    {}-bit {}, {}",
+        png.ihdr.bit_depth, color_type, interlaced
     );
 }
 

@@ -47,6 +47,17 @@ impl FilterStrategy {
             _ => None,
         }
     }
+
+    /// Check if two filter strategies are considered equivalent for the purpose of deduplication.
+    pub(crate) fn matches(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Basic(a), Self::Basic(b)) => a == b,
+            (Self::Predefined(a), Self::Predefined(b)) => a == b,
+            (Self::Basic(a), Self::Predefined(b)) => b.iter().all(|&x| x == *a),
+            (Self::Predefined(a), Self::Basic(b)) => a.iter().all(|&x| x == *b),
+            _ => false,
+        }
+    }
 }
 
 impl Display for FilterStrategy {

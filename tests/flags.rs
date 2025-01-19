@@ -95,91 +95,26 @@ fn test_it_converts(
 
 #[test]
 fn verbose_mode() {
-    use log::{Level, LevelFilter, Log, Metadata, Record, set_logger, set_max_level};
-    use std::cell::RefCell;
-    use std::sync::mpsc::{Sender, channel};
-
-    // Rust runs tests in parallel by default.
-    // We want to make sure that we verify only logs from our test.
-    //
-    // For that, we store an Option in a thread-local variable and
-    // initialise it with Some(sender) only on threads spawned within
-    // our test.
-    thread_local! {
-        static VERBOSE_LOGS: RefCell<Option<Sender<String>>> = const { RefCell::new(None) };
-    }
-
-    struct LogTester;
-
-    impl Log for LogTester {
-        fn enabled(&self, metadata: &Metadata) -> bool {
-            metadata.level() <= Level::Debug
-        }
-
-        fn log(&self, record: &Record) {
-            if record.level() == Level::Debug {
-                VERBOSE_LOGS.with(|logs| {
-                    // If current thread has a storage for logs, add our line.
-                    // Otherwise our handler is invoked from an unrelated test.
-                    if let Some(logs) = logs.borrow().as_ref() {
-                        logs.send(record.args().to_string()).unwrap();
-                    }
-                });
-            }
-        }
-
-        fn flush(&self) {}
-    }
-
-    set_logger(&LogTester).unwrap();
-    set_max_level(LevelFilter::Debug);
-
-    let input = PathBuf::from("tests/files/verbose_mode.png");
-    let (output, opts) = get_opts(&input);
-
-    let (sender, receiver) = channel();
-
-    let thread_init = move || {
-        // Initialise logs storage for all threads within our test.
-        VERBOSE_LOGS.with(|logs| *logs.borrow_mut() = Some(sender.clone()));
-    };
-    let thread_exec = move || {
-        test_it_converts(
-            input,
-            &output,
-            &opts,
-            RGB,
-            BitDepth::Eight,
-            RGB,
-            BitDepth::Eight,
-        );
-    };
-
-    #[cfg(feature = "parallel")]
-    rayon::ThreadPoolBuilder::new()
-        .start_handler(move |_| thread_init())
-        .num_threads(rayon::current_num_threads() + 1)
-        .build()
-        .unwrap()
-        .install(move || rayon::spawn(thread_exec));
-
-    #[cfg(not(feature = "parallel"))]
-    std::thread::spawn(move || {
-        thread_init();
-        thread_exec();
-    });
-
-    let logs: Vec<_> = receiver.into_iter().collect();
+    let path = "tests/files/verbose_mode.png";
+    let output = Command::new(env!("CARGO_BIN_EXE_oxipng"))
+        .args(["--dry-run", "--opt=1", "-vv", path])
+        .output()
+        .expect("Failed to run executable");
+    assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let logs: Vec<_> = stderr.lines().collect();
     let expected_prefixes = [
+        "Processing:",
         "    500x400 pixels, PNG format",
         "    8-bit RGB, non-interlaced",
         "    IDAT size = 113794 bytes",
         "    File size = 114708 bytes",
-        "Trying 1 filters with zc = ",
+        "Compressing 1 candidates with zc = ",
         "Found better result:",
-        "    zc = 11, f = None",
+        "    zc = 10, f = Bigrams",
         "    IDAT size = ",
         "    file size = ",
+        "", // Output size and path
     ];
     assert_eq!(logs.len(), expected_prefixes.len());
     for (i, log) in logs.into_iter().enumerate() {

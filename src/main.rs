@@ -299,6 +299,14 @@ fn parse_opts_into_struct(
             .collect();
     }
 
+    if let Some(&num) = matches.get_one::<usize>("max-trials") {
+        opts.max_trials = num;
+    }
+
+    if let Some(&percentage) = matches.get_one::<i64>("tolerance") {
+        opts.tolerance = (percentage as f64) / 100.0;
+    }
+
     if let Some(&num) = matches.get_one::<u64>("timeout") {
         opts.timeout = Some(Duration::from_secs(num));
     }
@@ -334,11 +342,6 @@ fn parse_opts_into_struct(
     opts.optimize_alpha = matches.get_flag("alpha");
 
     opts.scale_16 = matches.get_flag("scale16");
-
-    // The default value for fast depends on the preset - make sure we don't change when not provided
-    if matches.get_flag("fast") {
-        opts.fast_evaluation = matches.get_flag("fast");
-    }
 
     opts.force = matches.get_flag("force");
 

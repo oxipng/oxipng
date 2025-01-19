@@ -1,7 +1,6 @@
 //! Check if a reduction makes file smaller, and keep best reductions.
 //! Works asynchronously when possible
 
-#[cfg(not(feature = "parallel"))]
 use std::cell::RefCell;
 use std::sync::{
     Arc,
@@ -31,7 +30,9 @@ pub(crate) struct Candidate {
     /// Use this for the next round to avoid recomputing the filter.
     pub filter_used: FilterStrategy,
     /// For determining tie-breaker
-    nth: usize,
+    pub nth: usize,
+    /// The color type description, for logging
+    pub name: String,
 }
 
 impl Candidate {
@@ -40,8 +41,7 @@ impl Candidate {
             self.estimated_output_size,
             self.image.data.len(),
             self.filter.clone(),
-            // Prefer the later image added (e.g. baseline, which is always added last)
-            usize::MAX - self.nth,
+            self.nth,
         )
     }
 }
@@ -52,16 +52,13 @@ pub(crate) struct Evaluator {
     filters: IndexSet<FilterStrategy>,
     deflater: Deflater,
     optimize_alpha: bool,
-    final_round: bool,
-    nth: AtomicUsize,
-    executed: Arc<AtomicUsize>,
-    best_candidate_size: Arc<AtomicMin>,
+    retain_idat: bool,
+    pending: Arc<AtomicUsize>,
+    max_size: Arc<AtomicMin>,
+    candidates: RefCell<Vec<Candidate>>,
     /// images are sent to the caller thread for evaluation
     #[cfg(feature = "parallel")]
     eval_channel: (Sender<Candidate>, Receiver<Candidate>),
-    // in non-parallel mode, images are evaluated synchronously
-    #[cfg(not(feature = "parallel"))]
-    eval_best_candidate: RefCell<Option<Candidate>>,
 }
 
 impl Evaluator {
@@ -70,7 +67,8 @@ impl Evaluator {
         filters: IndexSet<FilterStrategy>,
         deflater: Deflater,
         optimize_alpha: bool,
-        final_round: bool,
+        tolerance: f64,
+        retain_idat: bool,
     ) -> Self {
         #[cfg(feature = "parallel")]
         let eval_channel = channel();
@@ -79,104 +77,101 @@ impl Evaluator {
             filters,
             deflater,
             optimize_alpha,
-            final_round,
-            nth: AtomicUsize::new(0),
-            executed: Arc::new(AtomicUsize::new(0)),
-            best_candidate_size: Arc::new(AtomicMin::new(None)),
+            retain_idat,
+            pending: Arc::new(AtomicUsize::new(0)),
+            max_size: Arc::new(AtomicMin::new(None, tolerance)),
+            candidates: RefCell::new(Vec::new()),
             #[cfg(feature = "parallel")]
             eval_channel,
-            #[cfg(not(feature = "parallel"))]
-            eval_best_candidate: RefCell::new(None),
         }
     }
 
-    /// Wait for all evaluations to finish and return smallest reduction
-    /// Or `None` if the queue is empty.
+    /// Wait for all evaluations to finish and return the passing results
+    pub fn get_candidates(self) -> Vec<Candidate> {
+        let max_size = self.max_size.clone();
+        let mut candidates = self.collect();
+        if candidates.is_empty() {
+            return candidates;
+        }
+        let max_size = max_size.get().unwrap();
+        candidates.retain(|c| c.estimated_output_size <= max_size);
+        candidates.sort_by_key(Candidate::cmp_key);
+        candidates
+    }
+
     #[cfg(feature = "parallel")]
-    pub fn get_best_candidate(self) -> Option<Candidate> {
+    fn collect(self) -> Vec<Candidate> {
         let (eval_send, eval_recv) = self.eval_channel;
         // Disconnect the sender, breaking the loop in the thread
         drop(eval_send);
-        let nth = self.nth.load(SeqCst);
         // Yield to ensure all evaluations are executed
         // This can prevent deadlocks when run within an existing rayon thread pool
-        while self.executed.load(Relaxed) < nth {
-            rayon::yield_local();
-        }
-        eval_recv.into_iter().min_by_key(Candidate::cmp_key)
+        while self.pending.load(Relaxed) > 0 && !rayon::yield_local().is_none() {}
+        let mut candidates = self.candidates.into_inner();
+        candidates.extend(eval_recv.iter());
+        candidates
     }
 
     #[cfg(not(feature = "parallel"))]
-    pub fn get_best_candidate(self) -> Option<Candidate> {
-        self.eval_best_candidate.into_inner()
+    fn collect(self) -> Vec<Candidate> {
+        self.candidates.into_inner()
     }
 
-    /// Set best size, if known in advance
-    pub fn set_best_size(&self, size: usize) {
-        self.best_candidate_size.set_min(size);
+    /// Inject previously evaluated candidates to be reconsidered for the final selection
+    pub fn inject_candidates(&self, candidates: Vec<Candidate>) {
+        self.max_size.set_min(candidates[0].estimated_output_size);
+        self.candidates.borrow_mut().extend(candidates);
     }
 
-    /// Check if the image is smaller than others
-    pub fn try_image(&self, image: Arc<PngImage>) {
+    /// Evaluate an image
+    pub fn try_image(&self, image: Arc<PngImage>, nth: usize) {
         let description = image.ihdr.color_type.to_string();
-        self.try_image_with_description(image, &description);
+        self.try_image_with_name(image, nth, &description);
     }
 
-    /// Check if the image is smaller than others, with a description for verbose mode
-    pub fn try_image_with_description(&self, image: Arc<PngImage>, description: &str) {
-        let nth = self.nth.fetch_add(1, SeqCst);
+    /// Evaluate an image with a type name
+    pub fn try_image_with_name(&self, image: Arc<PngImage>, nth: usize, name: &str) {
+        self.pending.fetch_add(1, Relaxed);
         // These clones are only cheap refcounts
         let deadline = self.deadline.clone();
         let filters = self.filters.clone();
         let deflater = self.deflater;
         let optimize_alpha = self.optimize_alpha;
-        let final_round = self.final_round;
-        let executed = self.executed.clone();
-        let best_candidate_size = self.best_candidate_size.clone();
-        let description = description.to_string();
+        let retain_idat = self.retain_idat;
+        let pending = self.pending.clone();
+        let max_size = self.max_size.clone();
+        let name = name.to_string();
         // sends it off asynchronously for compression,
         // but results will be collected via the message queue
         #[cfg(feature = "parallel")]
         let eval_send = self.eval_channel.0.clone();
         rayon::spawn(move || {
-            executed.fetch_add(1, Relaxed);
+            pending.fetch_sub(1, Relaxed);
             let filters_iter = filters.par_iter().with_max_len(1);
-
-            // Updating of best result inside the parallel loop would require locks,
-            // which are dangerous to do in side Rayon's loop.
-            // Instead, only update (atomic) best size in real time,
-            // and the best result later without need for locks.
             filters_iter.for_each(|filter| {
                 if deadline.passed() {
                     return;
                 }
                 let (filtered, filter_used) = image.filter_image(filter.clone(), optimize_alpha);
-                let idat_data = deflater.deflate(&filtered, best_candidate_size.get());
+                let idat_data = deflater.deflate(&filtered, max_size.get());
                 if let Ok(idat_data) = idat_data {
-                    let estimated_output_size = image.estimated_output_size(&idat_data);
+                    let size = image.estimated_output_size(&idat_data);
                     trace!(
                         "Eval: {}-bit {:23} {:8}   {} bytes",
-                        image.ihdr.bit_depth, description, filter, estimated_output_size
+                        image.ihdr.bit_depth, name, filter, size
                     );
 
-                    // Skip if it exceeds best known size. (This is important to ensure
-                    // the evaluator returns no result when all candidates are too large.)
-                    if let Some(max) = best_candidate_size.get()
-                        && estimated_output_size > max
-                    {
-                        return;
-                    }
-
-                    // We only need to retain the IDAT data in the final round
+                    // To save memory, only retain the IDAT when necessary
                     let new = Candidate {
                         image: image.clone(),
-                        idat_data: if final_round { Some(idat_data) } else { None },
-                        estimated_output_size,
+                        idat_data: if retain_idat { Some(idat_data) } else { None },
+                        estimated_output_size: size,
                         filter: filter.clone(),
                         filter_used,
+                        name: name.clone(),
                         nth,
                     };
-                    best_candidate_size.set_min(estimated_output_size);
+                    max_size.set_min(size);
 
                     #[cfg(feature = "parallel")]
                     {
@@ -185,18 +180,56 @@ impl Evaluator {
 
                     #[cfg(not(feature = "parallel"))]
                     {
-                        match &mut *self.eval_best_candidate.borrow_mut() {
-                            Some(prev) if prev.cmp_key() < new.cmp_key() => {}
-                            best => *best = Some(new),
-                        }
+                        self.candidates.borrow_mut().push(new);
                     }
                 } else if let Err(PngError::DeflatedDataTooLong(size)) = idat_data {
                     trace!(
                         "Eval: {}-bit {:23} {:8}  >{} bytes",
-                        image.ihdr.bit_depth, description, filter, size
+                        image.ihdr.bit_depth, name, filter, size
                     );
                 }
             });
         });
+    }
+
+    /// Recompress candidates with the given deflater, returning the best result
+    pub fn recompress_candidates(
+        candidates: Vec<Candidate>,
+        deadline: Arc<Deadline>,
+        deflater: Deflater,
+        optimize_alpha: bool,
+        max_size: Option<usize>,
+    ) -> Option<Candidate> {
+        let max_size = AtomicMin::new(max_size, 0.0);
+        let results_iter = candidates.into_par_iter().with_max_len(1);
+        let results = results_iter.filter_map(|mut candidate| {
+            if deadline.passed() {
+                return None;
+            }
+            let (filtered, filter_used) = candidate
+                .image
+                .filter_image(candidate.filter_used, optimize_alpha);
+            candidate.filter_used = filter_used;
+            let idat_data = deflater.deflate(&filtered, max_size.get());
+            if let Ok(idat_data) = idat_data {
+                let size = candidate.image.estimated_output_size(&idat_data);
+                trace!(
+                    "Main: {}-bit {:23} {:8}   {} bytes",
+                    candidate.image.ihdr.bit_depth, candidate.name, candidate.filter, size
+                );
+                // Retain the IDAT on the candidate
+                candidate.idat_data = Some(idat_data);
+                candidate.estimated_output_size = size;
+                max_size.set_min(size);
+                return Some(candidate);
+            } else if let Err(PngError::DeflatedDataTooLong(size)) = idat_data {
+                trace!(
+                    "Main: {}-bit {:23} {:8}  >{} bytes",
+                    candidate.image.ihdr.bit_depth, candidate.name, candidate.filter, size
+                );
+            }
+            None
+        });
+        results.min_by_key(Candidate::cmp_key)
     }
 }

@@ -240,8 +240,8 @@ losslessly.")
             Arg::new("filters")
                 .help("Filters to try (0-9; see '--help' for details)")
                 .long_help("\
-Perform compression trials with each of the given filter types. You can specify a \
-comma-separated list, or a range of values. E.g. '-f 0-3' is the same as '-f 0,1,2,3'.
+Evaluate each of the given filter types. You can specify a comma-separated list, or a \
+range of values. E.g. '-f 0-3' is the same as '-f 0,1,2,3'.
 
 PNG delta filters (apply the same filter to every line)
     0  =>  None      (recommended to always include this filter)
@@ -263,14 +263,24 @@ The default value depends on the optimization level preset.")
                 .value_name("list"),
         )
         .arg(
-            Arg::new("fast")
-                .help("Use fast filter evaluation")
+            Arg::new("max-trials")
+                .help("Maximum number of main compression trials to run")
                 .long_help("\
-Perform a fast compression evaluation of each enabled filter, followed by a single main \
-compression trial of the best result. Note that this is enabled by default and will only \
-be disabled at level 5 or above.")
-                .long("fast")
-                .action(ArgAction::SetTrue),
+Maximum number of main compression trials to run. If set to 0, only fast evaluations will \
+be performed.")
+                .long("max-trials")
+                .value_name("num")
+                .value_parser(value_parser!(usize))
+        )
+        .arg(
+            Arg::new("tolerance")
+                .long_help("\
+Tolerance factor to allow when selecting candidates for main compression trials. A higher \
+value may result in more trials being performed (up to the max allowed). A lower value \
+will skip candidates that are deemed less likely to yield better compression.")
+                .long("tolerance")
+                .value_name("percentage")
+                .value_parser(0..=100)
         )
         .arg(
             Arg::new("compression")
