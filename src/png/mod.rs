@@ -376,7 +376,7 @@ impl PngImage {
             }
             last_line.resize(line.data.len(), 0);
             let filter = RowFilter::try_from(line.filter).map_err(|_| PngError::InvalidData)?;
-            filter.unfilter_line(bpp, line.data, &last_line, &mut unfiltered_buf)?;
+            filter.unfilter_line(bpp, line.data, &last_line, &mut unfiltered_buf);
             unfiltered.extend_from_slice(&unfiltered_buf);
             std::mem::swap(&mut last_line, &mut unfiltered_buf);
             unfiltered_buf.clear();
@@ -386,7 +386,7 @@ impl PngImage {
 
     /// Apply the specified filter type to all rows in the image
     #[must_use]
-    pub fn filter_image(&self, filter: RowFilter, optimize_alpha: bool) -> Vec<u8> {
+    pub fn filter_image(&self, strategy: FilterStrategy, optimize_alpha: bool) -> Vec<u8> {
         let mut filtered = Vec::with_capacity(self.data.len());
         let bpp = self.bytes_per_channel() * self.channels_per_pixel();
         // If alpha optimization is enabled, determine how many bytes of alpha there are per pixel
@@ -406,7 +406,7 @@ impl PngImage {
             // Alpha optimisation may alter the line data, so we need a mutable copy of it
             let mut line_data = line.data.to_vec();
 
-            if filter <= RowFilter::Paeth {
+            if let FilterStrategy::Basic(filter) = strategy {
                 // Standard filters
                 let filter = if prev_pass == line.pass || filter <= RowFilter::Sub {
                     filter
@@ -431,12 +431,12 @@ impl PngImage {
                 let mut best_line_raw = Vec::new();
                 // Avoid vertical filtering on first line of each interlacing pass
                 let try_filters = if prev_pass == line.pass {
-                    RowFilter::STANDARD.iter()
+                    RowFilter::ALL.iter()
                 } else {
                     RowFilter::SINGLE_LINE.iter()
                 };
-                match filter {
-                    RowFilter::MinSum => {
+                match strategy {
+                    FilterStrategy::MinSum => {
                         // MSAD algorithm mentioned in libpng reference docs
                         // http://www.libpng.org/pub/png/book/chapter09.html
                         let mut best_size = usize::MAX;
@@ -453,7 +453,7 @@ impl PngImage {
                             }
                         }
                     }
-                    RowFilter::Entropy => {
+                    FilterStrategy::Entropy => {
                         // Shannon entropy algorithm, from LodePNG
                         // https://github.com/lvandeve/lodepng
                         let mut best_size = i32::MIN;
@@ -476,7 +476,7 @@ impl PngImage {
                             }
                         }
                     }
-                    RowFilter::Bigrams => {
+                    FilterStrategy::Bigrams => {
                         // Count distinct bigrams, from pngwolf
                         // https://bjoern.hoehrmann.de/pngwolf/
                         let mut best_size = usize::MAX;
@@ -495,7 +495,7 @@ impl PngImage {
                             }
                         }
                     }
-                    RowFilter::BigEnt => {
+                    FilterStrategy::BigEnt => {
                         // Bigram entropy, combined from Entropy and Bigrams filters
                         let mut best_size = i32::MIN;
                         // FxHasher is the fastest rust hasher currently available for this purpose
@@ -515,7 +515,7 @@ impl PngImage {
                             }
                         }
                     }
-                    RowFilter::Brute => {
+                    FilterStrategy::Brute => {
                         // Brute force by compressing each filter attempt
                         // Similar to that of LodePNG but includes some previous lines for context
                         let mut best_size = usize::MAX;

@@ -1,30 +1,67 @@
 use std::{fmt, fmt::Display, mem::transmute};
 
-use crate::error::PngError;
-
 /// Filtering strategy for use in [`Options`][crate::Options]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+pub enum FilterStrategy {
+    /// Same filter for all rows
+    Basic(RowFilter),
+    /// Minimum sum of absolute differences
+    MinSum,
+    /// Shannon entropy
+    Entropy,
+    /// Count of distinct bigrams
+    Bigrams,
+    /// Shannon entropy of bigrams
+    BigEnt,
+    /// Deflate compression
+    Brute,
+}
+
+impl Display for FilterStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Basic(filter) => filter.fmt(f),
+            Self::MinSum => "MinSum".fmt(f),
+            Self::Entropy => "Entropy".fmt(f),
+            Self::Bigrams => "Bigrams".fmt(f),
+            Self::BigEnt => "BigEnt".fmt(f),
+            Self::Brute => "Brute".fmt(f),
+        }
+    }
+}
+
+impl TryFrom<u8> for FilterStrategy {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0..=4 => Ok(Self::Basic(value.try_into()?)),
+            5 => Ok(Self::MinSum),
+            6 => Ok(Self::Entropy),
+            7 => Ok(Self::Bigrams),
+            8 => Ok(Self::BigEnt),
+            9 => Ok(Self::Brute),
+            _ => Err(()),
+        }
+    }
+}
+
+/// PNG delta filters
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum RowFilter {
-    // Standard filter types
     None,
     Sub,
     Up,
     Average,
     Paeth,
-    // Heuristic strategies
-    MinSum,
-    Entropy,
-    Bigrams,
-    BigEnt,
-    Brute,
 }
 
 impl TryFrom<u8> for RowFilter {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        if value > Self::LAST {
+        if value > 4 {
             return Err(());
         }
         unsafe { transmute(value as i8) }
@@ -40,11 +77,6 @@ impl Display for RowFilter {
                 Self::Up => "Up",
                 Self::Average => "Average",
                 Self::Paeth => "Paeth",
-                Self::MinSum => "MinSum",
-                Self::Entropy => "Entropy",
-                Self::Bigrams => "Bigrams",
-                Self::BigEnt => "BigEnt",
-                Self::Brute => "Brute",
             },
             f,
         )
@@ -52,9 +84,7 @@ impl Display for RowFilter {
 }
 
 impl RowFilter {
-    pub const LAST: u8 = Self::Brute as u8;
-    pub(crate) const STANDARD: [Self; 5] =
-        [Self::None, Self::Sub, Self::Up, Self::Average, Self::Paeth];
+    pub(crate) const ALL: [Self; 5] = [Self::None, Self::Sub, Self::Up, Self::Average, Self::Paeth];
     pub(crate) const SINGLE_LINE: [Self; 2] = [Self::None, Self::Sub];
 
     pub(crate) fn filter_line(
@@ -115,7 +145,6 @@ impl RowFilter {
                     });
                 }
             }
-            _ => unreachable!(),
         }
     }
 
@@ -140,6 +169,7 @@ impl RowFilter {
                     _ => i - 1,
                 };
                 match self {
+                    Self::None => unreachable!(),
                     Self::Sub => {
                         for j in 0..color_bytes {
                             pixels[i][j] = pixels[prev][j];
@@ -171,7 +201,6 @@ impl RowFilter {
                             };
                         }
                     }
-                    _ => unreachable!(),
                 }
             }
         }
@@ -183,7 +212,7 @@ impl RowFilter {
         data: &[u8],
         prev_line: &[u8],
         buf: &mut Vec<u8>,
-    ) -> Result<(), PngError> {
+    ) {
         buf.clear();
         buf.reserve(data.len());
         assert!(data.len() >= bpp);
@@ -232,9 +261,7 @@ impl RowFilter {
                     );
                 }
             }
-            _ => return Err(PngError::InvalidData),
         }
-        Ok(())
     }
 }
 

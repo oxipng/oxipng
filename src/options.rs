@@ -7,7 +7,12 @@ use std::{
 use indexmap::{IndexSet, indexset};
 use log::warn;
 
-use crate::{deflate::Deflaters, filters::RowFilter, headers::StripChunks, interlace::Interlacing};
+use crate::{
+    deflate::Deflaters,
+    filters::{FilterStrategy, RowFilter},
+    headers::StripChunks,
+    interlace::Interlacing,
+};
 
 /// Write destination for [`optimize`][crate::optimize].
 /// You can use [`optimize_from_memory`](crate::optimize_from_memory) to avoid external I/O.
@@ -94,10 +99,10 @@ pub struct Options {
     ///
     /// Default: `false`
     pub force: bool,
-    /// Which `RowFilters` to try on the file
+    /// Which `FilterStrategy` to try on the file
     ///
     /// Default: `None,Sub,Entropy,Bigrams`
-    pub filter: IndexSet<RowFilter>,
+    pub filter: IndexSet<FilterStrategy>,
     /// Whether to change the interlacing type of the file.
     ///
     /// These are the interlacing types avaliable:
@@ -207,10 +212,10 @@ impl Options {
     fn apply_preset_3(mut self) -> Self {
         self.fast_evaluation = false;
         self.filter = indexset! {
-            RowFilter::None,
-            RowFilter::Bigrams,
-            RowFilter::BigEnt,
-            RowFilter::Brute
+            FilterStrategy::Basic(RowFilter::None),
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute
         };
         self
     }
@@ -224,10 +229,10 @@ impl Options {
 
     fn apply_preset_5(mut self) -> Self {
         self.fast_evaluation = false;
-        self.filter.insert(RowFilter::Up);
-        self.filter.insert(RowFilter::MinSum);
-        self.filter.insert(RowFilter::BigEnt);
-        self.filter.insert(RowFilter::Brute);
+        self.filter.insert(FilterStrategy::Basic(RowFilter::Up));
+        self.filter.insert(FilterStrategy::MinSum);
+        self.filter.insert(FilterStrategy::BigEnt);
+        self.filter.insert(FilterStrategy::Brute);
         if let Deflaters::Libdeflater { compression } = &mut self.deflate {
             *compression = 12;
         }
@@ -235,8 +240,9 @@ impl Options {
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.filter.insert(RowFilter::Average);
-        self.filter.insert(RowFilter::Paeth);
+        self.filter
+            .insert(FilterStrategy::Basic(RowFilter::Average));
+        self.filter.insert(FilterStrategy::Basic(RowFilter::Paeth));
         self.apply_preset_5()
     }
 }
@@ -247,7 +253,12 @@ impl Default for Options {
         Self {
             fix_errors: false,
             force: false,
-            filter: indexset! {RowFilter::None, RowFilter::Sub, RowFilter::Entropy, RowFilter::Bigrams},
+            filter: indexset! {
+                FilterStrategy::Basic(RowFilter::None),
+                FilterStrategy::Basic(RowFilter::Sub),
+                FilterStrategy::Entropy,
+                FilterStrategy::Bigrams
+            },
             interlace: Some(Interlacing::None),
             optimize_alpha: false,
             bit_depth_reduction: true,

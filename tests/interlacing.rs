@@ -9,14 +9,11 @@ const RGB: u8 = 2;
 const INDEXED: u8 = 3;
 
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
-    let mut options = oxipng::Options {
+    let options = oxipng::Options {
         force: true,
+        filter: indexset! {FilterStrategy::Basic(RowFilter::None)},
         ..Default::default()
     };
-    let mut filter = IndexSet::new();
-    filter.insert(RowFilter::None);
-    options.filter = filter;
-
     (OutFile::from_path(input.with_extension("out.png")), options)
 }
 
