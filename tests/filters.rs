@@ -12,20 +12,17 @@ const GRAYSCALE_ALPHA: u8 = 4;
 const RGBA: u8 = 6;
 
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
-    let mut options = oxipng::Options {
+    let options = oxipng::Options {
         force: true,
+        filter: indexset! {FilterStrategy::Basic(RowFilter::None)},
         ..Default::default()
     };
-    let mut filter = IndexSet::new();
-    filter.insert(RowFilter::None);
-    options.filter = filter;
-
     (OutFile::from_path(input.with_extension("out.png")), options)
 }
 
 fn test_it_converts(
     input: &str,
-    filter: RowFilter,
+    filter: FilterStrategy,
     color_type_in: u8,
     bit_depth_in: BitDepth,
     color_type_out: u8,
@@ -68,7 +65,7 @@ fn test_it_converts(
 fn filter_0_for_rgba_16() {
     test_it_converts(
         "tests/files/filter_0_for_rgba_16.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         RGBA,
         BitDepth::Sixteen,
         RGBA,
@@ -80,7 +77,7 @@ fn filter_0_for_rgba_16() {
 fn filter_1_for_rgba_16() {
     test_it_converts(
         "tests/files/filter_1_for_rgba_16.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         RGBA,
         BitDepth::Sixteen,
         RGBA,
@@ -92,7 +89,7 @@ fn filter_1_for_rgba_16() {
 fn filter_2_for_rgba_16() {
     test_it_converts(
         "tests/files/filter_2_for_rgba_16.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         RGBA,
         BitDepth::Sixteen,
         RGBA,
@@ -104,7 +101,7 @@ fn filter_2_for_rgba_16() {
 fn filter_3_for_rgba_16() {
     test_it_converts(
         "tests/files/filter_3_for_rgba_16.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         RGBA,
         BitDepth::Sixteen,
         RGBA,
@@ -116,7 +113,7 @@ fn filter_3_for_rgba_16() {
 fn filter_4_for_rgba_16() {
     test_it_converts(
         "tests/files/filter_4_for_rgba_16.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         RGBA,
         BitDepth::Sixteen,
         RGBA,
@@ -128,7 +125,7 @@ fn filter_4_for_rgba_16() {
 fn filter_5_for_rgba_16() {
     test_it_converts(
         "tests/files/filter_5_for_rgba_16.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         RGBA,
         BitDepth::Sixteen,
         RGBA,
@@ -140,7 +137,7 @@ fn filter_5_for_rgba_16() {
 fn filter_0_for_rgba_8() {
     test_it_converts(
         "tests/files/filter_0_for_rgba_8.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         RGBA,
         BitDepth::Eight,
         RGBA,
@@ -152,7 +149,7 @@ fn filter_0_for_rgba_8() {
 fn filter_1_for_rgba_8() {
     test_it_converts(
         "tests/files/filter_1_for_rgba_8.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         RGBA,
         BitDepth::Eight,
         RGBA,
@@ -164,7 +161,7 @@ fn filter_1_for_rgba_8() {
 fn filter_2_for_rgba_8() {
     test_it_converts(
         "tests/files/filter_2_for_rgba_8.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         RGBA,
         BitDepth::Eight,
         RGBA,
@@ -176,7 +173,7 @@ fn filter_2_for_rgba_8() {
 fn filter_3_for_rgba_8() {
     test_it_converts(
         "tests/files/filter_3_for_rgba_8.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         RGBA,
         BitDepth::Eight,
         RGBA,
@@ -188,7 +185,7 @@ fn filter_3_for_rgba_8() {
 fn filter_4_for_rgba_8() {
     test_it_converts(
         "tests/files/filter_4_for_rgba_8.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         RGBA,
         BitDepth::Eight,
         RGBA,
@@ -200,7 +197,7 @@ fn filter_4_for_rgba_8() {
 fn filter_5_for_rgba_8() {
     test_it_converts(
         "tests/files/filter_5_for_rgba_8.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         RGBA,
         BitDepth::Eight,
         RGBA,
@@ -212,7 +209,7 @@ fn filter_5_for_rgba_8() {
 fn filter_0_for_rgb_16() {
     test_it_converts(
         "tests/files/filter_0_for_rgb_16.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -224,7 +221,7 @@ fn filter_0_for_rgb_16() {
 fn filter_1_for_rgb_16() {
     test_it_converts(
         "tests/files/filter_1_for_rgb_16.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -236,7 +233,7 @@ fn filter_1_for_rgb_16() {
 fn filter_2_for_rgb_16() {
     test_it_converts(
         "tests/files/filter_2_for_rgb_16.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -248,7 +245,7 @@ fn filter_2_for_rgb_16() {
 fn filter_3_for_rgb_16() {
     test_it_converts(
         "tests/files/filter_3_for_rgb_16.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -260,7 +257,7 @@ fn filter_3_for_rgb_16() {
 fn filter_4_for_rgb_16() {
     test_it_converts(
         "tests/files/filter_4_for_rgb_16.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -272,7 +269,7 @@ fn filter_4_for_rgb_16() {
 fn filter_5_for_rgb_16() {
     test_it_converts(
         "tests/files/filter_5_for_rgb_16.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -284,7 +281,7 @@ fn filter_5_for_rgb_16() {
 fn filter_0_for_rgb_8() {
     test_it_converts(
         "tests/files/filter_0_for_rgb_8.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         RGB,
         BitDepth::Eight,
         RGB,
@@ -296,7 +293,7 @@ fn filter_0_for_rgb_8() {
 fn filter_1_for_rgb_8() {
     test_it_converts(
         "tests/files/filter_1_for_rgb_8.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         RGB,
         BitDepth::Eight,
         RGB,
@@ -308,7 +305,7 @@ fn filter_1_for_rgb_8() {
 fn filter_2_for_rgb_8() {
     test_it_converts(
         "tests/files/filter_2_for_rgb_8.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         RGB,
         BitDepth::Eight,
         RGB,
@@ -320,7 +317,7 @@ fn filter_2_for_rgb_8() {
 fn filter_3_for_rgb_8() {
     test_it_converts(
         "tests/files/filter_3_for_rgb_8.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         RGB,
         BitDepth::Eight,
         RGB,
@@ -332,7 +329,7 @@ fn filter_3_for_rgb_8() {
 fn filter_4_for_rgb_8() {
     test_it_converts(
         "tests/files/filter_4_for_rgb_8.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         RGB,
         BitDepth::Eight,
         RGB,
@@ -344,7 +341,7 @@ fn filter_4_for_rgb_8() {
 fn filter_5_for_rgb_8() {
     test_it_converts(
         "tests/files/filter_5_for_rgb_8.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         RGB,
         BitDepth::Eight,
         RGB,
@@ -356,7 +353,7 @@ fn filter_5_for_rgb_8() {
 fn filter_0_for_grayscale_alpha_16() {
     test_it_converts(
         "tests/files/filter_0_for_grayscale_alpha_16.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         GRAYSCALE_ALPHA,
         BitDepth::Sixteen,
         GRAYSCALE_ALPHA,
@@ -368,7 +365,7 @@ fn filter_0_for_grayscale_alpha_16() {
 fn filter_1_for_grayscale_alpha_16() {
     test_it_converts(
         "tests/files/filter_1_for_grayscale_alpha_16.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         GRAYSCALE_ALPHA,
         BitDepth::Sixteen,
         GRAYSCALE_ALPHA,
@@ -380,7 +377,7 @@ fn filter_1_for_grayscale_alpha_16() {
 fn filter_2_for_grayscale_alpha_16() {
     test_it_converts(
         "tests/files/filter_2_for_grayscale_alpha_16.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         GRAYSCALE_ALPHA,
         BitDepth::Sixteen,
         GRAYSCALE_ALPHA,
@@ -392,7 +389,7 @@ fn filter_2_for_grayscale_alpha_16() {
 fn filter_3_for_grayscale_alpha_16() {
     test_it_converts(
         "tests/files/filter_3_for_grayscale_alpha_16.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         GRAYSCALE_ALPHA,
         BitDepth::Sixteen,
         GRAYSCALE_ALPHA,
@@ -404,7 +401,7 @@ fn filter_3_for_grayscale_alpha_16() {
 fn filter_4_for_grayscale_alpha_16() {
     test_it_converts(
         "tests/files/filter_4_for_grayscale_alpha_16.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         GRAYSCALE_ALPHA,
         BitDepth::Sixteen,
         GRAYSCALE_ALPHA,
@@ -416,7 +413,7 @@ fn filter_4_for_grayscale_alpha_16() {
 fn filter_5_for_grayscale_alpha_16() {
     test_it_converts(
         "tests/files/filter_5_for_grayscale_alpha_16.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         GRAYSCALE_ALPHA,
         BitDepth::Sixteen,
         GRAYSCALE_ALPHA,
@@ -428,7 +425,7 @@ fn filter_5_for_grayscale_alpha_16() {
 fn filter_0_for_grayscale_alpha_8() {
     test_it_converts(
         "tests/files/filter_0_for_grayscale_alpha_8.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         GRAYSCALE_ALPHA,
         BitDepth::Eight,
         GRAYSCALE_ALPHA,
@@ -440,7 +437,7 @@ fn filter_0_for_grayscale_alpha_8() {
 fn filter_1_for_grayscale_alpha_8() {
     test_it_converts(
         "tests/files/filter_1_for_grayscale_alpha_8.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         GRAYSCALE_ALPHA,
         BitDepth::Eight,
         GRAYSCALE_ALPHA,
@@ -452,7 +449,7 @@ fn filter_1_for_grayscale_alpha_8() {
 fn filter_2_for_grayscale_alpha_8() {
     test_it_converts(
         "tests/files/filter_2_for_grayscale_alpha_8.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         GRAYSCALE_ALPHA,
         BitDepth::Eight,
         GRAYSCALE_ALPHA,
@@ -464,7 +461,7 @@ fn filter_2_for_grayscale_alpha_8() {
 fn filter_3_for_grayscale_alpha_8() {
     test_it_converts(
         "tests/files/filter_3_for_grayscale_alpha_8.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         GRAYSCALE_ALPHA,
         BitDepth::Eight,
         GRAYSCALE_ALPHA,
@@ -476,7 +473,7 @@ fn filter_3_for_grayscale_alpha_8() {
 fn filter_4_for_grayscale_alpha_8() {
     test_it_converts(
         "tests/files/filter_4_for_grayscale_alpha_8.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         GRAYSCALE_ALPHA,
         BitDepth::Eight,
         GRAYSCALE_ALPHA,
@@ -488,7 +485,7 @@ fn filter_4_for_grayscale_alpha_8() {
 fn filter_5_for_grayscale_alpha_8() {
     test_it_converts(
         "tests/files/filter_5_for_grayscale_alpha_8.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         GRAYSCALE_ALPHA,
         BitDepth::Eight,
         GRAYSCALE_ALPHA,
@@ -500,7 +497,7 @@ fn filter_5_for_grayscale_alpha_8() {
 fn filter_0_for_grayscale_16() {
     test_it_converts(
         "tests/files/filter_0_for_grayscale_16.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         GRAYSCALE,
         BitDepth::Sixteen,
         GRAYSCALE,
@@ -512,7 +509,7 @@ fn filter_0_for_grayscale_16() {
 fn filter_1_for_grayscale_16() {
     test_it_converts(
         "tests/files/filter_1_for_grayscale_16.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         GRAYSCALE,
         BitDepth::Sixteen,
         GRAYSCALE,
@@ -524,7 +521,7 @@ fn filter_1_for_grayscale_16() {
 fn filter_2_for_grayscale_16() {
     test_it_converts(
         "tests/files/filter_2_for_grayscale_16.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         GRAYSCALE,
         BitDepth::Sixteen,
         GRAYSCALE,
@@ -536,7 +533,7 @@ fn filter_2_for_grayscale_16() {
 fn filter_3_for_grayscale_16() {
     test_it_converts(
         "tests/files/filter_3_for_grayscale_16.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         GRAYSCALE,
         BitDepth::Sixteen,
         GRAYSCALE,
@@ -548,7 +545,7 @@ fn filter_3_for_grayscale_16() {
 fn filter_4_for_grayscale_16() {
     test_it_converts(
         "tests/files/filter_4_for_grayscale_16.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         GRAYSCALE,
         BitDepth::Sixteen,
         GRAYSCALE,
@@ -560,7 +557,7 @@ fn filter_4_for_grayscale_16() {
 fn filter_5_for_grayscale_16() {
     test_it_converts(
         "tests/files/filter_5_for_grayscale_16.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         GRAYSCALE,
         BitDepth::Sixteen,
         GRAYSCALE,
@@ -572,7 +569,7 @@ fn filter_5_for_grayscale_16() {
 fn filter_0_for_grayscale_8() {
     test_it_converts(
         "tests/files/filter_0_for_grayscale_8.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         GRAYSCALE,
         BitDepth::Eight,
         GRAYSCALE,
@@ -584,7 +581,7 @@ fn filter_0_for_grayscale_8() {
 fn filter_1_for_grayscale_8() {
     test_it_converts(
         "tests/files/filter_1_for_grayscale_8.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         GRAYSCALE,
         BitDepth::Eight,
         GRAYSCALE,
@@ -596,7 +593,7 @@ fn filter_1_for_grayscale_8() {
 fn filter_2_for_grayscale_8() {
     test_it_converts(
         "tests/files/filter_2_for_grayscale_8.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         GRAYSCALE,
         BitDepth::Eight,
         GRAYSCALE,
@@ -608,7 +605,7 @@ fn filter_2_for_grayscale_8() {
 fn filter_3_for_grayscale_8() {
     test_it_converts(
         "tests/files/filter_3_for_grayscale_8.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         GRAYSCALE,
         BitDepth::Eight,
         GRAYSCALE,
@@ -620,7 +617,7 @@ fn filter_3_for_grayscale_8() {
 fn filter_4_for_grayscale_8() {
     test_it_converts(
         "tests/files/filter_4_for_grayscale_8.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         GRAYSCALE,
         BitDepth::Eight,
         GRAYSCALE,
@@ -632,7 +629,7 @@ fn filter_4_for_grayscale_8() {
 fn filter_5_for_grayscale_8() {
     test_it_converts(
         "tests/files/filter_5_for_grayscale_8.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         GRAYSCALE,
         BitDepth::Eight,
         GRAYSCALE,
@@ -644,7 +641,7 @@ fn filter_5_for_grayscale_8() {
 fn filter_0_for_palette_4() {
     test_it_converts(
         "tests/files/filter_0_for_palette_4.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -656,7 +653,7 @@ fn filter_0_for_palette_4() {
 fn filter_1_for_palette_4() {
     test_it_converts(
         "tests/files/filter_1_for_palette_4.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -668,7 +665,7 @@ fn filter_1_for_palette_4() {
 fn filter_2_for_palette_4() {
     test_it_converts(
         "tests/files/filter_2_for_palette_4.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -680,7 +677,7 @@ fn filter_2_for_palette_4() {
 fn filter_3_for_palette_4() {
     test_it_converts(
         "tests/files/filter_3_for_palette_4.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -692,7 +689,7 @@ fn filter_3_for_palette_4() {
 fn filter_4_for_palette_4() {
     test_it_converts(
         "tests/files/filter_4_for_palette_4.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -704,7 +701,7 @@ fn filter_4_for_palette_4() {
 fn filter_5_for_palette_4() {
     test_it_converts(
         "tests/files/filter_5_for_palette_4.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -716,7 +713,7 @@ fn filter_5_for_palette_4() {
 fn filter_0_for_palette_2() {
     test_it_converts(
         "tests/files/filter_0_for_palette_2.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -728,7 +725,7 @@ fn filter_0_for_palette_2() {
 fn filter_1_for_palette_2() {
     test_it_converts(
         "tests/files/filter_1_for_palette_2.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -740,7 +737,7 @@ fn filter_1_for_palette_2() {
 fn filter_2_for_palette_2() {
     test_it_converts(
         "tests/files/filter_2_for_palette_2.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -752,7 +749,7 @@ fn filter_2_for_palette_2() {
 fn filter_3_for_palette_2() {
     test_it_converts(
         "tests/files/filter_3_for_palette_2.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -764,7 +761,7 @@ fn filter_3_for_palette_2() {
 fn filter_4_for_palette_2() {
     test_it_converts(
         "tests/files/filter_4_for_palette_2.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -776,7 +773,7 @@ fn filter_4_for_palette_2() {
 fn filter_5_for_palette_2() {
     test_it_converts(
         "tests/files/filter_5_for_palette_2.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -788,7 +785,7 @@ fn filter_5_for_palette_2() {
 fn filter_0_for_palette_1() {
     test_it_converts(
         "tests/files/filter_0_for_palette_1.png",
-        RowFilter::None,
+        FilterStrategy::Basic(RowFilter::None),
         INDEXED,
         BitDepth::One,
         INDEXED,
@@ -800,7 +797,7 @@ fn filter_0_for_palette_1() {
 fn filter_1_for_palette_1() {
     test_it_converts(
         "tests/files/filter_1_for_palette_1.png",
-        RowFilter::Sub,
+        FilterStrategy::Basic(RowFilter::Sub),
         INDEXED,
         BitDepth::One,
         INDEXED,
@@ -812,7 +809,7 @@ fn filter_1_for_palette_1() {
 fn filter_2_for_palette_1() {
     test_it_converts(
         "tests/files/filter_2_for_palette_1.png",
-        RowFilter::Up,
+        FilterStrategy::Basic(RowFilter::Up),
         INDEXED,
         BitDepth::One,
         INDEXED,
@@ -824,7 +821,7 @@ fn filter_2_for_palette_1() {
 fn filter_3_for_palette_1() {
     test_it_converts(
         "tests/files/filter_3_for_palette_1.png",
-        RowFilter::Average,
+        FilterStrategy::Basic(RowFilter::Average),
         INDEXED,
         BitDepth::One,
         INDEXED,
@@ -836,7 +833,7 @@ fn filter_3_for_palette_1() {
 fn filter_4_for_palette_1() {
     test_it_converts(
         "tests/files/filter_4_for_palette_1.png",
-        RowFilter::Paeth,
+        FilterStrategy::Basic(RowFilter::Paeth),
         INDEXED,
         BitDepth::One,
         INDEXED,
@@ -848,7 +845,7 @@ fn filter_4_for_palette_1() {
 fn filter_5_for_palette_1() {
     test_it_converts(
         "tests/files/filter_5_for_palette_1.png",
-        RowFilter::MinSum,
+        FilterStrategy::MinSum,
         INDEXED,
         BitDepth::One,
         INDEXED,

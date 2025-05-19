@@ -17,14 +17,16 @@ use rayon::prelude::*;
 
 #[cfg(not(feature = "parallel"))]
 use crate::rayon;
-use crate::{atomicmin::AtomicMin, deflate, filters::RowFilter, png::PngImage, Deadline, PngError};
+use crate::{
+    atomicmin::AtomicMin, deflate, filters::FilterStrategy, png::PngImage, Deadline, PngError,
+};
 
 pub(crate) struct Candidate {
     pub image: Arc<PngImage>,
     pub data: Vec<u8>,
     pub data_is_compressed: bool,
     pub estimated_output_size: usize,
-    pub filter: RowFilter,
+    pub filter: FilterStrategy,
     // For determining tie-breaker
     nth: usize,
 }
@@ -44,7 +46,7 @@ impl Candidate {
 /// Collect image versions and pick one that compresses best
 pub(crate) struct Evaluator {
     deadline: Arc<Deadline>,
-    filters: IndexSet<RowFilter>,
+    filters: IndexSet<FilterStrategy>,
     deflater: Deflaters,
     optimize_alpha: bool,
     final_round: bool,
@@ -62,7 +64,7 @@ pub(crate) struct Evaluator {
 impl Evaluator {
     pub fn new(
         deadline: Arc<Deadline>,
-        filters: IndexSet<RowFilter>,
+        filters: IndexSet<FilterStrategy>,
         deflater: Deflaters,
         optimize_alpha: bool,
         final_round: bool,
