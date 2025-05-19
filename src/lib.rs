@@ -45,7 +45,7 @@ pub use crate::{
     colors::{BitDepth, ColorType},
     deflate::Deflaters,
     error::PngError,
-    filters::RowFilter,
+    filters::{FilterStrategy, RowFilter},
     headers::StripChunks,
     interlace::Interlacing,
     options::{InFile, Options, OutFile},
@@ -432,7 +432,7 @@ fn optimize_raw(
         opts.filter.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
-        indexset! {RowFilter::None, RowFilter::Bigrams}
+        indexset! {FilterStrategy::Basic(RowFilter::None), FilterStrategy::Bigrams}
     };
     // This will collect all versions of images and pick one that compresses best
     let eval = Evaluator::new(
@@ -489,7 +489,7 @@ fn perform_trials(
     deadline: Arc<Deadline>,
     max_size: Option<usize>,
     mut eval_result: Option<Candidate>,
-    eval_filters: IndexSet<RowFilter>,
+    eval_filters: IndexSet<FilterStrategy>,
     eval_deflater: Deflaters,
 ) -> Option<Candidate> {
     let mut filters = opts.filter.clone();
@@ -548,10 +548,10 @@ fn perform_trials(
         // Pick a filter automatically
         if image.ihdr.bit_depth as u8 >= 8 {
             // Bigrams is the best all-rounder when there's at least one byte per pixel
-            filters.insert(RowFilter::Bigrams);
+            filters.insert(FilterStrategy::Bigrams);
         } else {
             // Otherwise delta filters generally don't work well, so just stick with None
-            filters.insert(RowFilter::None);
+            filters.insert(FilterStrategy::Basic(RowFilter::None));
         }
     }
 
@@ -627,7 +627,7 @@ fn recompress_frames(
     png: &mut PngData,
     opts: &Options,
     deadline: Arc<Deadline>,
-    filter: RowFilter,
+    filter: FilterStrategy,
 ) -> PngResult<()> {
     if !opts.idat_recoding || png.frames.is_empty() {
         return Ok(());
