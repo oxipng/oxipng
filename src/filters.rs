@@ -1,7 +1,7 @@
 use std::{fmt, fmt::Display, mem::transmute};
 
 /// Filtering strategy for use in [`Options`][crate::Options]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum FilterStrategy {
     /// Same filter for all rows
     Basic(RowFilter),
@@ -15,6 +15,8 @@ pub enum FilterStrategy {
     BigEnt,
     /// Deflate compression
     Brute,
+    /// Predefined filter for each row
+    Predefined(Vec<RowFilter>),
 }
 
 impl Display for FilterStrategy {
@@ -26,6 +28,7 @@ impl Display for FilterStrategy {
             Self::Bigrams => "Bigrams".fmt(f),
             Self::BigEnt => "BigEnt".fmt(f),
             Self::Brute => "Brute".fmt(f),
+            Self::Predefined(_) => "Predefined".fmt(f),
         }
     }
 }
