@@ -66,7 +66,7 @@ version = "1.10.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.39"
+version = "4.5.40"
 features = ["wrap_help"]
 
 [target.'cfg(windows)'.dependencies.glob]
