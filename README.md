@@ -1,8 +1,8 @@
 # Oxipng
 
-[![Build Status](https://github.com/shssoichiro/oxipng/workflows/oxipng/badge.svg)](https://github.com/shssoichiro/oxipng/actions?query=branch%3Amaster)
+[![Build Status](https://github.com/oxipng/oxipng/workflows/oxipng/badge.svg)](https://github.com/oxipng/oxipng/actions?query=branch%3Amaster)
 [![Version](https://img.shields.io/crates/v/oxipng.svg)](https://crates.io/crates/oxipng)
-[![License](https://img.shields.io/crates/l/oxipng.svg)](https://github.com/shssoichiro/oxipng/blob/master/LICENSE)
+[![License](https://img.shields.io/crates/l/oxipng.svg)](https://github.com/oxipng/oxipng/blob/master/LICENSE)
 [![Docs](https://docs.rs/oxipng/badge.svg)](https://docs.rs/oxipng)
 
 ## Overview
@@ -13,7 +13,7 @@ interface or as a library in other Rust programs.
 ## Installing
 
 Oxipng for Windows can be downloaded via the
-[Releases](https://github.com/shssoichiro/oxipng/releases) section on its GitHub page. Recently,
+[Releases](https://github.com/oxipng/oxipng/releases) section on its GitHub page. Recently,
 however, Oxipng has also been made available through package managers. Check the list below for
 up-to-date options.
 
@@ -34,7 +34,7 @@ Oxipng can also be built from source using the latest stable or nightly Rust.
 This is primarily useful for developing on Oxipng.
 
 ```
-git clone https://github.com/shssoichiro/oxipng.git
+git clone https://github.com/oxipng/oxipng.git
 cd oxipng
 cargo build --release
 cp target/release/oxipng /usr/local/bin
@@ -85,7 +85,7 @@ preamble to an already existing one:
 
 ```yaml
 repos:
-  - repo: https://github.com/shssoichiro/oxipng
+  - repo: https://github.com/oxipng/oxipng
     rev: v9.1.4
     hooks:
       - id: oxipng
@@ -95,12 +95,12 @@ repos:
 
 ## Docker
 
-A Docker image is availlable at `ghcr.io/shssoichiro/oxipng` for `linux/amd64` and `linux/arm64`.
+A Docker image is availlable at `ghcr.io/oxipng/oxipng` for `linux/amd64` and `linux/arm64`.
 
 You can use it the following way:
 
 ```bash
-docker run --rm -v $(pwd):/work ghcr.io/shssoichiro/oxipng -o 4 /work/file.png
+docker run --rm -v $(pwd):/work ghcr.io/oxipng/oxipng -o 4 /work/file.png
 ```
 
 ## Library Usage

@@ -166,51 +166,51 @@
 ### Version 3.0.0
 
 - [Breaking] Bump minimum Rust version to 1.41.0
-- [Breaking] Use IndexMap/IndexSet to provide more consistent performance ([#202](https://github.com/shssoichiro/oxipng/pull/202))
+- [Breaking] Use IndexMap/IndexSet to provide more consistent performance ([#202](https://github.com/oxipng/oxipng/pull/202))
   - This changes some public-facing types.
     `IndexMap` and `IndexSet` are reexported
     at the crate root to aid migration.
-- [Breaking] Remove fields from the `Options` struct which were never used ([#211](https://github.com/shssoichiro/oxipng/pull/211/files#diff-b4aea3e418ccdb71239b96952d9cddb6L217), [#212](https://github.com/shssoichiro/oxipng/pull/212/files#diff-b4aea3e418ccdb71239b96952d9cddb6L134))
-- [Breaking] Refactor zlib-specific options in the `Options` struct ([#210](https://github.com/shssoichiro/oxipng/pull/210/files))
-- [Feature] Add libdeflater as an option ([#203](https://github.com/shssoichiro/oxipng/pull/203))
-- [Feature] Use standard `log` library ([#218](https://github.com/shssoichiro/oxipng/pull/218))
-- [Feature] Add `-o max` setting which will always reference the highest compression preset ([#224](https://github.com/shssoichiro/oxipng/pull/224))
+- [Breaking] Remove fields from the `Options` struct which were never used ([#211](https://github.com/oxipng/oxipng/pull/211/files#diff-b4aea3e418ccdb71239b96952d9cddb6L217), [#212](https://github.com/oxipng/oxipng/pull/212/files#diff-b4aea3e418ccdb71239b96952d9cddb6L134))
+- [Breaking] Refactor zlib-specific options in the `Options` struct ([#210](https://github.com/oxipng/oxipng/pull/210/files))
+- [Feature] Add libdeflater as an option ([#203](https://github.com/oxipng/oxipng/pull/203))
+- [Feature] Use standard `log` library ([#218](https://github.com/oxipng/oxipng/pull/218))
+- [Feature] Add `-o max` setting which will always reference the highest compression preset ([#224](https://github.com/oxipng/oxipng/pull/224))
 - [Deprecated] `-o 4` was found to be equivalent to `-o 3` and is deprecated.
   It will likely be removed in a future release.
-  For now it remains equivalent to `-o 3`. ([#224](https://github.com/shssoichiro/oxipng/pull/224))
-- [Bugfix] Ensure output is deterministic ([#199](https://github.com/shssoichiro/oxipng/pull/199))
+  For now it remains equivalent to `-o 3`. ([#224](https://github.com/oxipng/oxipng/pull/224))
+- [Bugfix] Ensure output is deterministic ([#199](https://github.com/oxipng/oxipng/pull/199))
 - Update `image` crate to 0.23
 - Update `itertools` crate to 0.9
 - Various performance and internal improvements
 
 ### Version 2.3.0
 
-- Allow disabling all alpha optimizations ([#181](https://github.com/shssoichiro/oxipng/pull/181))
-- Fix interlacing issues on tiny images ([#182](https://github.com/shssoichiro/oxipng/pull/182))
-- Reduce memory usage in filtering ([#191](https://github.com/shssoichiro/oxipng/pull/191))
-- Implement palette sorting to improve compression ([#193](https://github.com/shssoichiro/oxipng/pull/193))
-- Disable alpha optimizations by default ([#187](https://github.com/shssoichiro/oxipng/pull/187))
-- Add support for WASM ([#194](https://github.com/shssoichiro/oxipng/pull/194))
+- Allow disabling all alpha optimizations ([#181](https://github.com/oxipng/oxipng/pull/181))
+- Fix interlacing issues on tiny images ([#182](https://github.com/oxipng/oxipng/pull/182))
+- Reduce memory usage in filtering ([#191](https://github.com/oxipng/oxipng/pull/191))
+- Implement palette sorting to improve compression ([#193](https://github.com/oxipng/oxipng/pull/193))
+- Disable alpha optimizations by default ([#187](https://github.com/oxipng/oxipng/pull/187))
+- Add support for WASM ([#194](https://github.com/oxipng/oxipng/pull/194))
 
 ### Version 2.2.2
 
-- Fix grayscale bit-depth reduction ([#171](https://github.com/shssoichiro/oxipng/pull/171))
-- Fix typos and incorrect log message ([#172](https://github.com/shssoichiro/oxipng/pull/172))
-- Make metadata order deterministic ([#174](https://github.com/shssoichiro/oxipng/pull/174))
-- Fix 32-bit builds ([#176](https://github.com/shssoichiro/oxipng/pull/176))
-- Enable LTO in release builds ([#177](https://github.com/shssoichiro/oxipng/pull/177))
-- Use deterministic compression strategy ([#179](https://github.com/shssoichiro/oxipng/pull/179))
-- Fix decoding interlaced images with height or width <= 2 ([#175](https://github.com/shssoichiro/oxipng/pull/175))
-- Preallocate memory in reduced_alpha_to_up ([#180](https://github.com/shssoichiro/oxipng/pull/180))
+- Fix grayscale bit-depth reduction ([#171](https://github.com/oxipng/oxipng/pull/171))
+- Fix typos and incorrect log message ([#172](https://github.com/oxipng/oxipng/pull/172))
+- Make metadata order deterministic ([#174](https://github.com/oxipng/oxipng/pull/174))
+- Fix 32-bit builds ([#176](https://github.com/oxipng/oxipng/pull/176))
+- Enable LTO in release builds ([#177](https://github.com/oxipng/oxipng/pull/177))
+- Use deterministic compression strategy ([#179](https://github.com/oxipng/oxipng/pull/179))
+- Fix decoding interlaced images with height or width <= 2 ([#175](https://github.com/oxipng/oxipng/pull/175))
+- Preallocate memory in reduced_alpha_to_up ([#180](https://github.com/oxipng/oxipng/pull/180))
 - Update `bit-vec` crate to 0.6
 
 ### Version 2.2.1
 
-- Fix compression of very large files ([#167](https://github.com/shssoichiro/oxipng/pull/167)) ([#168](https://github.com/shssoichiro/oxipng/pull/168))
+- Fix compression of very large files ([#167](https://github.com/oxipng/oxipng/pull/167)) ([#168](https://github.com/oxipng/oxipng/pull/168))
 
 ### Version 2.2.0
 
-- Various internal improvements ([#154](https://github.com/shssoichiro/oxipng/pull/154)) ([#158](https://github.com/shssoichiro/oxipng/pull/158)) ([#160](https://github.com/shssoichiro/oxipng/pull/160)) ([#161](https://github.com/shssoichiro/oxipng/pull/161)) ([#162](https://github.com/shssoichiro/oxipng/pull/162)) ([#163](https://github.com/shssoichiro/oxipng/pull/163))
+- Various internal improvements ([#154](https://github.com/oxipng/oxipng/pull/154)) ([#158](https://github.com/oxipng/oxipng/pull/158)) ([#160](https://github.com/oxipng/oxipng/pull/160)) ([#161](https://github.com/oxipng/oxipng/pull/161)) ([#162](https://github.com/oxipng/oxipng/pull/162)) ([#163](https://github.com/oxipng/oxipng/pull/163))
 - Update `image` crate to 0.21.0
 - Update `itertools` crate to 0.8.0
 - Update `zopfli` crate to 0.4.0
@@ -219,24 +219,24 @@
 
 ### Version 2.1.8
 
-- Fix non-standard sBIT headers in other code locations ([#153](https://github.com/shssoichiro/oxipng/issues/153))
+- Fix non-standard sBIT headers in other code locations ([#153](https://github.com/oxipng/oxipng/issues/153))
 
 ### Version 2.1.7
 
-- 80x faster palette reduction ([#150](https://github.com/shssoichiro/oxipng/pull/150))
-- Optimize RGB to palette conversion ([#148](https://github.com/shssoichiro/oxipng/pull/148))
-- Various microoptimizations ([#146](https://github.com/shssoichiro/oxipng/pull/146))
-- Introduce third-party safe wrapper around cloudflare-zlib ([#149](https://github.com/shssoichiro/oxipng/pull/149))
+- 80x faster palette reduction ([#150](https://github.com/oxipng/oxipng/pull/150))
+- Optimize RGB to palette conversion ([#148](https://github.com/oxipng/oxipng/pull/148))
+- Various microoptimizations ([#146](https://github.com/oxipng/oxipng/pull/146))
+- Introduce third-party safe wrapper around cloudflare-zlib ([#149](https://github.com/oxipng/oxipng/pull/149))
 
 ### Version 2.1.6
 
-- Identify and drop useless sRGB profiles ([#143](https://github.com/shssoichiro/oxipng/pull/143))
-- Alpha heuristic improvements ([#144](https://github.com/shssoichiro/oxipng/pull/144))
+- Identify and drop useless sRGB profiles ([#143](https://github.com/oxipng/oxipng/pull/143))
+- Alpha heuristic improvements ([#144](https://github.com/oxipng/oxipng/pull/144))
 - Bump `miniz_oxide` and `cloudflare-zlib-sys` to 0.2.0
 
 ### Version 2.1.5
 
-- Fix issue where some images will incorrectly reduce bit depth ([#140](https://github.com/shssoichiro/oxipng/issues/140))
+- Fix issue where some images will incorrectly reduce bit depth ([#140](https://github.com/oxipng/oxipng/issues/140))
 
 ### Version 2.1.4
 
@@ -249,22 +249,22 @@
 
 ### Version 2.1.2
 
-- Fix issue with PNG to Indexed reduction on images with transparency pixel ([#129](https://github.com/shssoichiro/oxipng/issues/129))
+- Fix issue with PNG to Indexed reduction on images with transparency pixel ([#129](https://github.com/oxipng/oxipng/issues/129))
 
 ### Version 2.1.1
 
-- More fixes for alpha optimization on interlaced images ([#133](https://github.com/shssoichiro/oxipng/issues/133))
+- More fixes for alpha optimization on interlaced images ([#133](https://github.com/oxipng/oxipng/issues/133))
 
 ### Version 2.1.0
 
 - [SEMVER_MINOR] Bump minimum Rust version to 1.27.0
 - [SEMVER_MINOR] Reenable faster Cloudflare zlib compression on platforms that support it
-- Fix memory leak with Cloudflare zlib ([#126](https://github.com/shssoichiro/oxipng/issues/126))
+- Fix memory leak with Cloudflare zlib ([#126](https://github.com/oxipng/oxipng/issues/126))
 - Minor fixes and cleanup
 
 ### Version 2.0.2
 
-- Fix an issue in alpha optimization on interlaced images ([#113](https://github.com/shssoichiro/oxipng/issues/113))
+- Fix an issue in alpha optimization on interlaced images ([#113](https://github.com/oxipng/oxipng/issues/113))
 
 ### Version 2.0.1
 
@@ -301,12 +301,12 @@
 
 ### Version 1.0.1
 
-- Bump rayon to 1.0 ([#99](https://github.com/shssoichiro/oxipng/pull/99) @cuviper)
+- Bump rayon to 1.0 ([#99](https://github.com/oxipng/oxipng/pull/99) @cuviper)
 - Bump minor versions of other dependencies for binary distribution
 
 ### Version 1.0.0
 
-- Remove the C dependency on miniz, and replace it with a Rust version ([#57](https://github.com/shssoichiro/oxipng/issues/57))
+- Remove the C dependency on miniz, and replace it with a Rust version ([#57](https://github.com/oxipng/oxipng/issues/57))
   - This improves decompression speed by 15%. Compression speed is not affected.
   - [SEMVER_MAJOR] This also obsoletes the `-zm` command line option and the `memory` key on the `Options` struct.
   - Presets will be updated automatically. This means that presets 3 and higher will run significantly more quickly.
@@ -333,30 +333,30 @@
 
 ### Version 0.18.3
 
-- Return exit code of 1 if an error occurred while processing a file using the CLI app ([#93](https://github.com/shssoichiro/oxipng/issues/93))
+- Return exit code of 1 if an error occurred while processing a file using the CLI app ([#93](https://github.com/oxipng/oxipng/issues/93))
 
 ### Version 0.18.2
 
 - Bump `image` to 0.18
-- Fix unfiltering of scan lines in interlaced images ([#92](https://github.com/shssoichiro/oxipng/issues/92))
+- Fix unfiltering of scan lines in interlaced images ([#92](https://github.com/oxipng/oxipng/issues/92))
 
 ### Version 0.18.1
 
 - Bump `rayon` to 0.9
-- Fix failure to optimize on certain grayscale images ([#89](https://github.com/shssoichiro/oxipng/issues/89))
+- Fix failure to optimize on certain grayscale images ([#89](https://github.com/oxipng/oxipng/issues/89))
 
 ### Version 0.18.0
 
 - Bump `itertools` to 0.7
 - Bump `image` to 0.17
 - [SEMVER_MAJOR] Bump minimum rustc version to 1.20.0
-- Fix parsing of glob paths on Windows ([#90](https://github.com/shssoichiro/oxipng/issues/90))
+- Fix parsing of glob paths on Windows ([#90](https://github.com/oxipng/oxipng/issues/90))
 
 ### Version 0.17.2
 
 - Bump `image` to 0.16
-- Quickly pass over files that do not have a PNG header ([#85](https://github.com/shssoichiro/oxipng/issues/85) @emielbeinema)
-- Return an error instead of crashing on APNG files ([#83](https://github.com/shssoichiro/oxipng/issues/83) @emielbeinema)
+- Quickly pass over files that do not have a PNG header ([#85](https://github.com/oxipng/oxipng/issues/85) @emielbeinema)
+- Return an error instead of crashing on APNG files ([#83](https://github.com/oxipng/oxipng/issues/83) @emielbeinema)
 
 ### Version 0.17.1
 
@@ -372,14 +372,14 @@
   trials for optimizing the alpha channel, using the previously mentioned fast heuristic.
   This option will make optimization of images with transparency somewhat slower,
   but may improve compression.
-- Fixed a bug in reducing palettes for images with bit depth of two ([#80](https://github.com/shssoichiro/oxipng/issues/80))
-- Fixed another bug in reducing palettes for images with bit depth less than eight ([#82](https://github.com/shssoichiro/oxipng/issues/82))
+- Fixed a bug in reducing palettes for images with bit depth of two ([#80](https://github.com/oxipng/oxipng/issues/80))
+- Fixed another bug in reducing palettes for images with bit depth less than eight ([#82](https://github.com/oxipng/oxipng/issues/82))
 - Code cleanup
 - Bump `image` to 0.15
 
 ### Version 0.16.3
 
-- Fix command-line help text ([#70](https://github.com/shssoichiro/oxipng/issues/70))
+- Fix command-line help text ([#70](https://github.com/oxipng/oxipng/issues/70))
 
 ### Version 0.16.2
 
@@ -397,18 +397,18 @@
 
 ### Version 0.15.2
 
-- Bump `image` to 0.13 ([#65](https://github.com/shssoichiro/oxipng/pull/65))
+- Bump `image` to 0.13 ([#65](https://github.com/oxipng/oxipng/pull/65))
 - Bump `rayon` to 0.7
 - Bump `itertools` to 0.6
 
 ### Version 0.15.1
 
-- Ignore color reductions that would increase file size ([#61](https://github.com/shssoichiro/oxipng/issues/61))
+- Ignore color reductions that would increase file size ([#61](https://github.com/oxipng/oxipng/issues/61))
 
 ### Version 0.15.0
 
-- [SEMVER_MINOR] Check images for correctness before writing result ([#60](https://github.com/shssoichiro/oxipng/issues/60))
-- Fix invalid output when reducing image to a different color type but file size does not improve ([#60](https://github.com/shssoichiro/oxipng/issues/60))
+- [SEMVER_MINOR] Check images for correctness before writing result ([#60](https://github.com/oxipng/oxipng/issues/60))
+- Fix invalid output when reducing image to a different color type but file size does not improve ([#60](https://github.com/oxipng/oxipng/issues/60))
 - Don't write new file if moving from interlaced to non-interlaced if new file would be larger
 
 ### Version 0.14.4
@@ -442,14 +442,14 @@
 
 ### Version 0.13.0
 
-- Fix bug in certain PNG headers when reducing color type ([#52](https://github.com/shssoichiro/oxipng/issues/52))
+- Fix bug in certain PNG headers when reducing color type ([#52](https://github.com/oxipng/oxipng/issues/52))
 - [SEMVER_MAJOR] Reduction functions now take `&mut PngData` and return a `bool` indicating whether the image was reduced
 - [SMEVER_MAJOR] Bump minimum required rustc version to 1.12.0
 
 ### Version 0.12.0
 
 - Performance optimizations
-- Fix processing filenames that contain commas (@aliceatlas [#50](https://github.com/shssoichiro/oxipng/pull/50))
+- Fix processing filenames that contain commas (@aliceatlas [#50](https://github.com/oxipng/oxipng/pull/50))
 - [SEMVER_MINOR] Add zopfli option (-Z), disabled by default. Gives about 10% better compression, but is currently 50-100x slower.
 
 ### Version 0.11.0
@@ -474,7 +474,7 @@
 
 ### Version 0.8.2
 
-- Fix issue where images smaller than 4px width would crash on interlacing ([#42](https://github.com/shssoichiro/oxipng/issues/42))
+- Fix issue where images smaller than 4px width would crash on interlacing ([#42](https://github.com/oxipng/oxipng/issues/42))
 
 ### Version 0.8.1
 
@@ -490,7 +490,7 @@
 - Minor compression improvement on interlaced images
 - Performance optimizations
 - [SEMVER_MINOR] Move default Options into a Default impl
-- [SEMVER_MINOR] Add option for setting number of threads ([#39](https://github.com/shssoichiro/oxipng/issues/39))
+- [SEMVER_MINOR] Add option for setting number of threads ([#39](https://github.com/oxipng/oxipng/issues/39))
 
 ### Version 0.6.0
 
@@ -501,47 +501,47 @@
 
 ### Version 0.5.0
 
-- [SEMVER_MINOR] Palette entries can now reduced, on by default ([#11](https://github.com/shssoichiro/oxipng/issues/11))
+- [SEMVER_MINOR] Palette entries can now reduced, on by default ([#11](https://github.com/oxipng/oxipng/issues/11))
 - Don't report that we are in pretend mode if verbosity is set to none
-- Add cargo bench suite ([#7](https://github.com/shssoichiro/oxipng/issues/7))
+- Add cargo bench suite ([#7](https://github.com/oxipng/oxipng/issues/7))
 
 ### Version 0.4.0
 
 - Performance optimizations
-- [SEMVER_MAJOR] `-s` automatically infers `--strip safe` ([#31](https://github.com/shssoichiro/oxipng/issues/31))
+- [SEMVER_MAJOR] `-s` automatically infers `--strip safe` ([#31](https://github.com/oxipng/oxipng/issues/31))
 - Update byteorder and clap crates
 - Fix issue where interlaced images incorrectly applied filters on the first line of a pass
 
 ### Version 0.3.0
 
 - Properly decode interlaced images
-- [SEMVER_MINOR] Allow converting between progressive and interlaced images ([#3](https://github.com/shssoichiro/oxipng/issues/3))
+- [SEMVER_MINOR] Allow converting between progressive and interlaced images ([#3](https://github.com/oxipng/oxipng/issues/3))
 - Fix a bug that would cause oxipng to crash on very small images
 
 ### Version 0.2.2
 
 - Limit number of threads to 1.5x number of cores
-- Significantly improve memory usage, especially with high optimization levels. ([#32](https://github.com/shssoichiro/oxipng/issues/32))
-- Refactor output code ([#19](https://github.com/shssoichiro/oxipng/issues/19))
+- Significantly improve memory usage, especially with high optimization levels. ([#32](https://github.com/oxipng/oxipng/issues/32))
+- Refactor output code ([#19](https://github.com/oxipng/oxipng/issues/19))
 
 ### Version 0.2.1
 
 - Add rustdoc for public methods and structs
-- Improve filter mode 5 heuristic ([#16](https://github.com/shssoichiro/oxipng/issues/16))
-- Add tests for edge-case images with subtitles ([#29](https://github.com/shssoichiro/oxipng/issues/29))
+- Improve filter mode 5 heuristic ([#16](https://github.com/oxipng/oxipng/issues/16))
+- Add tests for edge-case images with subtitles ([#29](https://github.com/oxipng/oxipng/issues/29))
 
 ### Version 0.2.0
 
 - Fix program version that is displayed when running `oxipng -V`
-- Ensure `--quiet` mode is actually quiet (@SethDusek [#20](https://github.com/shssoichiro/oxipng/pull/20))
+- Ensure `--quiet` mode is actually quiet (@SethDusek [#20](https://github.com/oxipng/oxipng/pull/20))
 - Write status/debug information to stderr instead of stdout
-- Use heuristics to determine best combination for `-o1` ([#21](https://github.com/shssoichiro/oxipng/issues/21))
+- Use heuristics to determine best combination for `-o1` ([#21](https://github.com/oxipng/oxipng/issues/21))
 - [SEMVER_MAJOR] Allow 'safe', 'all', or comma-separated list as options for `--strip`
 - [SEMVER_MINOR] Add `-s` alias for `--strip`
 
 ### Version 0.1.1
 
-- Fix `oxipng *` writing all input files to one output file ([#15](https://github.com/shssoichiro/oxipng/issues/15))
+- Fix `oxipng *` writing all input files to one output file ([#15](https://github.com/oxipng/oxipng/issues/15))
 
 ### Version 0.1.0
 

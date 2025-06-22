@@ -37,7 +37,7 @@ LABEL org.opencontainers.image.title="Oxipng"
 LABEL org.opencontainers.image.description="Multithreaded PNG optimizer written in Rust"
 LABEL org.opencontainers.image.authors="Joshua Holmer <jholmer.in@gmail.com>"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.source="https://github.com/shssoichiro/oxipng"
+LABEL org.opencontainers.image.source="https://github.com/oxipng/oxipng"
 
 COPY --from=base /src/target/oxipng /usr/local/bin/oxipng
 
