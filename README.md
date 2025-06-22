@@ -95,13 +95,15 @@ repos:
 
 ## Docker
 
-A Docker image is availlable at `ghcr.io/oxipng/oxipng` for `linux/amd64` and `linux/arm64`.
+A Docker image is availlable at [`ghcr.io/oxipng/oxipng`](https://github.com/oxipng/oxipng/pkgs/container/oxipng) for `linux/amd64` and `linux/arm64`.
 
 You can use it the following way:
 
 ```bash
 docker run --rm -v $(pwd):/work ghcr.io/oxipng/oxipng -o 4 /work/file.png
 ```
+
+Some older images are also available at [`ghcr.io/shssoichiro/oxipng`](https://github.com/users/shssoichiro/packages/container/package/oxipng).
 
 ## Library Usage
 
