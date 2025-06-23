@@ -89,7 +89,7 @@ jobs:
               # so make the binary world-executable to meet user
               # expectations set by preceding releases.
               # Related issue:
-              # https://github.com/shssoichiro/oxipng/issues/575
+              # https://github.com/oxipng/oxipng/issues/575
               chmod ugo+x "$ARCHIVE_NAME"/oxipng
               tar -vczf "${ARCHIVE_NAME}.tar.gz" "$ARCHIVE_NAME"/*;;
           esac

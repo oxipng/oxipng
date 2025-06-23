@@ -16,15 +16,15 @@ exclude = [
   "tests/*",
   "xtask/*",
 ]
-homepage = "https://github.com/shssoichiro/oxipng"
+homepage = "https://github.com/oxipng/oxipng"
 license = "MIT"
 name = "oxipng"
-repository = "https://github.com/shssoichiro/oxipng"
+repository = "https://github.com/oxipng/oxipng"
 version = "9.1.5"
 rust-version = "1.74.0"
 
 [badges]
-travis-ci = { repository = "shssoichiro/oxipng", branch = "master" }
+travis-ci = { repository = "oxipng/oxipng", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [[bin]]
