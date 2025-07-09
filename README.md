@@ -86,7 +86,7 @@ preamble to an already existing one:
 ```yaml
 repos:
   - repo: https://github.com/oxipng/oxipng
-    rev: v9.1.4
+    rev: v9.1.5
     hooks:
       - id: oxipng
         args: ["-o", "4", "--strip", "safe", "--alpha"]
