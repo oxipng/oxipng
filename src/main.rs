@@ -17,7 +17,7 @@
 mod rayon;
 
 #[cfg(feature = "zopfli")]
-use std::num::NonZeroU8;
+use std::num::NonZeroU64;
 use std::{
     ffi::OsString, fs::DirBuilder, io::Write, path::PathBuf, process::ExitCode, time::Duration,
 };
@@ -26,6 +26,8 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
+#[cfg(feature = "zopfli")]
+use oxipng::ZopfliOptions;
 use oxipng::{Deflater, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
@@ -331,10 +333,11 @@ fn parse_opts_into_struct(
 
     #[cfg(feature = "zopfli")]
     if matches.get_flag("zopfli") {
-        let iterations = *matches.get_one::<i64>("iterations").unwrap();
-        opts.deflater = Deflater::Zopfli {
-            iterations: NonZeroU8::new(iterations as u8).unwrap(),
-        };
+        let iteration_count = *matches.get_one::<NonZeroU64>("iterations").unwrap();
+        opts.deflater = Deflater::Zopfli(ZopfliOptions {
+            iteration_count,
+            ..Default::default()
+        });
     }
     if let (Deflater::Libdeflater { compression }, Some(x)) =
         (&mut opts.deflater, matches.get_one::<i64>("compression"))
