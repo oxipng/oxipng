@@ -11,7 +11,7 @@ const INDEXED: u8 = 3;
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
     let options = oxipng::Options {
         force: true,
-        filter: indexset! {FilterStrategy::Basic(RowFilter::None)},
+        filter: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
     (OutFile::from_path(input.with_extension("out.png")), options)

@@ -8,10 +8,7 @@ use indexmap::{IndexSet, indexset};
 use log::warn;
 
 use crate::{
-    deflate::Deflaters,
-    filters::{FilterStrategy, RowFilter},
-    headers::StripChunks,
-    interlace::Interlacing,
+    deflate::Deflaters, filters::FilterStrategy, headers::StripChunks, interlace::Interlacing,
 };
 
 /// Write destination for [`optimize`][crate::optimize].
@@ -212,7 +209,7 @@ impl Options {
     fn apply_preset_3(mut self) -> Self {
         self.fast_evaluation = false;
         self.filter = indexset! {
-            FilterStrategy::Basic(RowFilter::None),
+            FilterStrategy::NONE,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
             FilterStrategy::Brute
@@ -229,7 +226,7 @@ impl Options {
 
     fn apply_preset_5(mut self) -> Self {
         self.fast_evaluation = false;
-        self.filter.insert(FilterStrategy::Basic(RowFilter::Up));
+        self.filter.insert(FilterStrategy::UP);
         self.filter.insert(FilterStrategy::MinSum);
         self.filter.insert(FilterStrategy::BigEnt);
         self.filter.insert(FilterStrategy::Brute);
@@ -240,9 +237,8 @@ impl Options {
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.filter
-            .insert(FilterStrategy::Basic(RowFilter::Average));
-        self.filter.insert(FilterStrategy::Basic(RowFilter::Paeth));
+        self.filter.insert(FilterStrategy::AVERAGE);
+        self.filter.insert(FilterStrategy::PAETH);
         self.apply_preset_5()
     }
 }
@@ -254,8 +250,8 @@ impl Default for Options {
             fix_errors: false,
             force: false,
             filter: indexset! {
-                FilterStrategy::Basic(RowFilter::None),
-                FilterStrategy::Basic(RowFilter::Sub),
+                FilterStrategy::NONE,
+                FilterStrategy::SUB,
                 FilterStrategy::Entropy,
                 FilterStrategy::Bigrams
             },

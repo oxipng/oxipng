@@ -432,7 +432,7 @@ fn optimize_raw(
         opts.filter.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
-        indexset! {FilterStrategy::Basic(RowFilter::None), FilterStrategy::Bigrams}
+        indexset! {FilterStrategy::NONE, FilterStrategy::Bigrams}
     };
     // This will collect all versions of images and pick one that compresses best
     let eval = Evaluator::new(
@@ -551,7 +551,7 @@ fn perform_trials(
             filters.insert(FilterStrategy::Bigrams);
         } else {
             // Otherwise delta filters generally don't work well, so just stick with None
-            filters.insert(FilterStrategy::Basic(RowFilter::None));
+            filters.insert(FilterStrategy::NONE);
         }
     }
 
