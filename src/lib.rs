@@ -679,7 +679,7 @@ fn copy_permissions(metadata_input: &Metadata, out_file: &File) -> PngResult<()>
         .set_permissions(metadata_input.permissions())
         .map_err(|err_io| {
             PngError::new(&format!(
-                "unable to set permissions for output file: {err_io}"
+                "Unable to set permissions for output file: {err_io}"
             ))
         })
 }
@@ -695,7 +695,7 @@ fn copy_times(input_path_meta: &Metadata, out_path: &Path) -> PngResult<()> {
     trace!("attempting to set file modification time: {mtime:?}");
     filetime::set_file_mtime(out_path, mtime).map_err(|err_io| {
         PngError::new(&format!(
-            "unable to set file times on {out_path:?}: {err_io}"
+            "Unable to set file times on {out_path:?}: {err_io}"
         ))
     })
 }
