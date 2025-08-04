@@ -7,9 +7,7 @@ use std::{
 use indexmap::{IndexSet, indexset};
 use log::warn;
 
-use crate::{
-    deflate::Deflater, filters::FilterStrategy, headers::StripChunks, interlace::Interlacing,
-};
+use crate::{deflate::Deflater, filters::FilterStrategy, headers::StripChunks};
 
 /// Write destination for [`optimize`][crate::optimize].
 /// You can use [`optimize_from_memory`](crate::optimize_from_memory) to avoid external I/O.
@@ -100,15 +98,13 @@ pub struct Options {
     ///
     /// Default: `None,Sub,Entropy,Bigrams`
     pub filters: IndexSet<FilterStrategy>,
-    /// Whether to change the interlacing type of the file.
+    /// Whether to change the interlacing of the file.
     ///
-    /// These are the interlacing types avaliable:
-    /// - `None` will not change the current interlacing type.
-    /// - `Some(x)` will change the file to interlacing mode `x`.
-    ///   See [`Interlacing`] for the possible interlacing types.
+    /// - `None` will not change the current interlacing.
+    /// - `Some(x)` will turn interlacing on or off.
     ///
-    /// Default: `Some(Interlacing::None)`
-    pub interlace: Option<Interlacing>,
+    /// Default: `Some(false)`
+    pub interlace: Option<bool>,
     /// Whether to allow transparent pixels to be altered to improve compression.
     ///
     /// Default: `false`
@@ -255,7 +251,7 @@ impl Default for Options {
                 FilterStrategy::Entropy,
                 FilterStrategy::Bigrams
             },
-            interlace: Some(Interlacing::None),
+            interlace: Some(false),
             optimize_alpha: false,
             bit_depth_reduction: true,
             color_type_reduction: true,

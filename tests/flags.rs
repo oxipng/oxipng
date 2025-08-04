@@ -316,7 +316,7 @@ fn strip_chunks_none() {
 fn interlacing_0_to_1() {
     let input = PathBuf::from("tests/files/interlacing_0_to_1.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
 
     test_it_converts_callbacks(
         input,
@@ -327,10 +327,10 @@ fn interlacing_0_to_1() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
     );
 }
@@ -339,7 +339,7 @@ fn interlacing_0_to_1() {
 fn interlacing_1_to_0() {
     let input = PathBuf::from("tests/files/interlacing_1_to_0.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::None);
+    opts.interlace = Some(false);
 
     test_it_converts_callbacks(
         input,
@@ -350,10 +350,10 @@ fn interlacing_1_to_0() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
     );
 }
@@ -362,7 +362,7 @@ fn interlacing_1_to_0() {
 fn interlacing_0_to_1_small_files() {
     let input = PathBuf::from("tests/files/interlacing_0_to_1_small_files.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
 
     test_it_converts_callbacks(
         input,
@@ -373,10 +373,10 @@ fn interlacing_0_to_1_small_files() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
     );
 }
@@ -385,7 +385,7 @@ fn interlacing_0_to_1_small_files() {
 fn interlacing_1_to_0_small_files() {
     let input = PathBuf::from("tests/files/interlacing_1_to_0_small_files.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::None);
+    opts.interlace = Some(false);
 
     test_it_converts_callbacks(
         input,
@@ -396,10 +396,10 @@ fn interlacing_1_to_0_small_files() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
     );
 }
@@ -408,7 +408,7 @@ fn interlacing_1_to_0_small_files() {
 fn interlaced_0_to_1_other_filter_mode() {
     let input = PathBuf::from("tests/files/interlaced_0_to_1_other_filter_mode.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
     opts.filters = indexset! {FilterStrategy::PAETH};
 
     test_it_converts_callbacks(
@@ -420,10 +420,10 @@ fn interlaced_0_to_1_other_filter_mode() {
         GRAY,
         BitDepth::Sixteen,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
     );
 }

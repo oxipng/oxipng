@@ -35,7 +35,7 @@ fn test_it_converts(
 
     assert_eq!(png.raw.ihdr.color_type.png_header_code(), color_type_in);
     assert_eq!(png.raw.ihdr.bit_depth, bit_depth_in);
-    assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+    assert!(png.raw.ihdr.interlaced);
 
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),

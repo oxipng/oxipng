@@ -47,7 +47,6 @@ pub use crate::{
     error::PngError,
     filters::{FilterStrategy, RowFilter},
     headers::StripChunks,
-    interlace::Interlacing,
     options::{InFile, Options, OutFile},
 };
 use crate::{
@@ -130,7 +129,7 @@ impl RawImage {
                     height,
                     color_type,
                     bit_depth,
-                    interlaced: Interlacing::None,
+                    interlaced: false,
                 },
                 data,
             }),
@@ -397,7 +396,7 @@ fn optimize_png(
         );
     }
 
-    if opts.interlace == Some(Interlacing::Adam7) && png.raw.ihdr.interlaced != Interlacing::Adam7 {
+    if opts.interlace == Some(true) && !png.raw.ihdr.interlaced {
         warn!(
             "Interlacing was not enabled as it would result in a larger file. To override this, use `--force`."
         );
@@ -618,9 +617,14 @@ impl Deadline {
 
 /// Display the format of the image data
 fn report_format(prefix: &str, png: &PngImage) {
+    let interlaced = if png.ihdr.interlaced {
+        "interlaced"
+    } else {
+        "non-interlaced"
+    };
     debug!(
         "{}{}-bit {}, {}",
-        prefix, png.ihdr.bit_depth, png.ihdr.color_type, png.ihdr.interlaced
+        prefix, png.ihdr.bit_depth, png.ihdr.color_type, interlaced
     );
 }
 

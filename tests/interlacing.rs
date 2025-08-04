@@ -19,7 +19,7 @@ fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
 
 fn test_it_converts(
     input: &str,
-    interlace: Interlacing,
+    interlace: bool,
     color_type_in: u8,
     bit_depth_in: BitDepth,
     color_type_out: u8,
@@ -31,14 +31,7 @@ fn test_it_converts(
     opts.interlace = Some(interlace);
     assert_eq!(png.raw.ihdr.color_type.png_header_code(), color_type_in);
     assert_eq!(png.raw.ihdr.bit_depth, bit_depth_in);
-    assert_eq!(
-        png.raw.ihdr.interlaced,
-        if interlace == Interlacing::Adam7 {
-            Interlacing::None
-        } else {
-            Interlacing::Adam7
-        }
-    );
+    assert_eq!(png.raw.ihdr.interlaced, !interlace);
 
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
@@ -65,7 +58,7 @@ fn test_it_converts(
 fn deinterlace_rgb_16() {
     test_it_converts(
         "tests/files/interlaced_rgb_16_should_be_rgb_16.png",
-        Interlacing::None,
+        false,
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -77,7 +70,7 @@ fn deinterlace_rgb_16() {
 fn deinterlace_rgb_8() {
     test_it_converts(
         "tests/files/interlaced_rgb_8_should_be_rgb_8.png",
-        Interlacing::None,
+        false,
         RGB,
         BitDepth::Eight,
         RGB,
@@ -89,7 +82,7 @@ fn deinterlace_rgb_8() {
 fn deinterlace_palette_8() {
     test_it_converts(
         "tests/files/interlaced_palette_8_should_be_palette_8.png",
-        Interlacing::None,
+        false,
         INDEXED,
         BitDepth::Eight,
         INDEXED,
@@ -101,7 +94,7 @@ fn deinterlace_palette_8() {
 fn deinterlace_palette_4() {
     test_it_converts(
         "tests/files/interlaced_palette_4_should_be_palette_4.png",
-        Interlacing::None,
+        false,
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -113,7 +106,7 @@ fn deinterlace_palette_4() {
 fn deinterlace_palette_2() {
     test_it_converts(
         "tests/files/interlaced_palette_2_should_be_palette_2.png",
-        Interlacing::None,
+        false,
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -125,7 +118,7 @@ fn deinterlace_palette_2() {
 fn deinterlace_palette_1() {
     test_it_converts(
         "tests/files/interlaced_palette_1_should_be_palette_1.png",
-        Interlacing::None,
+        false,
         INDEXED,
         BitDepth::One,
         INDEXED,
@@ -137,7 +130,7 @@ fn deinterlace_palette_1() {
 fn interlace_rgb_16() {
     test_it_converts(
         "tests/files/rgb_16_should_be_rgb_16.png",
-        Interlacing::Adam7,
+        true,
         RGB,
         BitDepth::Sixteen,
         RGB,
@@ -149,7 +142,7 @@ fn interlace_rgb_16() {
 fn interlace_rgb_8() {
     test_it_converts(
         "tests/files/rgb_8_should_be_rgb_8.png",
-        Interlacing::Adam7,
+        true,
         RGB,
         BitDepth::Eight,
         RGB,
@@ -161,7 +154,7 @@ fn interlace_rgb_8() {
 fn interlace_palette_8() {
     test_it_converts(
         "tests/files/palette_8_should_be_palette_8.png",
-        Interlacing::Adam7,
+        true,
         INDEXED,
         BitDepth::Eight,
         INDEXED,
@@ -173,7 +166,7 @@ fn interlace_palette_8() {
 fn interlace_palette_4() {
     test_it_converts(
         "tests/files/palette_4_should_be_palette_4.png",
-        Interlacing::Adam7,
+        true,
         INDEXED,
         BitDepth::Four,
         INDEXED,
@@ -185,7 +178,7 @@ fn interlace_palette_4() {
 fn interlace_palette_2() {
     test_it_converts(
         "tests/files/palette_2_should_be_palette_2.png",
-        Interlacing::Adam7,
+        true,
         INDEXED,
         BitDepth::Two,
         INDEXED,
@@ -197,7 +190,7 @@ fn interlace_palette_2() {
 fn interlace_palette_1() {
     test_it_converts(
         "tests/files/palette_1_should_be_palette_1.png",
-        Interlacing::Adam7,
+        true,
         INDEXED,
         BitDepth::One,
         INDEXED,

@@ -276,11 +276,7 @@ fn parse_opts_into_struct(
     opts.idat_recoding = !matches.get_flag("no-recoding");
 
     if let Some(x) = matches.get_one::<String>("interlace") {
-        opts.interlace = if x == "keep" {
-            None
-        } else {
-            x.parse::<u8>().unwrap().try_into().ok()
-        };
+        opts.interlace = if x == "keep" { None } else { Some(x == "1") };
     }
 
     if let Some(keep) = matches.get_one::<String>("keep") {

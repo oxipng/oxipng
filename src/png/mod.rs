@@ -19,7 +19,7 @@ use crate::{
     error::PngError,
     filters::*,
     headers::*,
-    interlace::{Interlacing, deinterlace_image, interlace_image},
+    interlace::{deinterlace_image, interlace_image},
 };
 
 pub(crate) mod scan_lines;
@@ -293,18 +293,17 @@ impl PngImage {
         Ok(image)
     }
 
-    /// Convert the image to the specified interlacing type
-    /// Returns true if the interlacing was changed, false otherwise
-    /// The `interlace` parameter specifies the *new* interlacing mode
+    /// Enable or disable interlacing
+    /// Returns the new image if the interlacing was changed, None otherwise
     /// Assumes that the data has already been de-filtered
     #[inline]
     #[must_use]
-    pub fn change_interlacing(&self, interlace: Interlacing) -> Option<Self> {
+    pub fn change_interlacing(&self, interlace: bool) -> Option<Self> {
         if interlace == self.ihdr.interlaced {
             return None;
         }
 
-        Some(if interlace == Interlacing::Adam7 {
+        Some(if interlace {
             // Convert progressive to interlaced data
             interlace_image(self)
         } else {

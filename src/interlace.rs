@@ -1,42 +1,6 @@
-use std::{fmt, fmt::Display};
-
 use bitvec::prelude::*;
 
-use crate::{PngError, headers::IhdrData, png::PngImage};
-
-/// Whether to enable progressive rendering. See [`Options`][crate::Options])
-#[repr(u8)]
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Interlacing {
-    /// Makes images load top to bottom.
-    None,
-    /// Makes it possible to render partially-loaded images at lower resolution. Usually increases file sizes.
-    Adam7,
-}
-
-impl TryFrom<u8> for Interlacing {
-    type Error = PngError;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::None),
-            1 => Ok(Self::Adam7),
-            _ => Err(PngError::new("Unexpected interlacing in header")),
-        }
-    }
-}
-
-impl Display for Interlacing {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Display::fmt(
-            match self {
-                Self::None => "non-interlaced",
-                Self::Adam7 => "interlaced",
-            },
-            f,
-        )
-    }
-}
+use crate::{headers::IhdrData, png::PngImage};
 
 #[must_use]
 pub fn interlace_image(png: &PngImage) -> PngImage {
@@ -89,7 +53,7 @@ pub fn interlace_image(png: &PngImage) -> PngImage {
         data: output,
         ihdr: IhdrData {
             color_type: png.ihdr.color_type.clone(),
-            interlaced: Interlacing::Adam7,
+            interlaced: true,
             ..png.ihdr
         },
     }
@@ -103,7 +67,7 @@ pub fn deinterlace_image(png: &PngImage) -> PngImage {
         },
         ihdr: IhdrData {
             color_type: png.ihdr.color_type.clone(),
-            interlaced: Interlacing::None,
+            interlaced: false,
             ..png.ihdr
         },
     }
