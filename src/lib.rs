@@ -263,7 +263,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
 
     match (output, input) {
         (OutFile::None, _) => {
-            info!("{savings}: Running in pretend mode, no output");
+            info!("{savings}: Dry run, no output");
         }
         (&OutFile::StdOut, _) | (&OutFile::Path { path: None, .. }, &InFile::StdIn) => {
             let mut buffer = BufWriter::new(stdout());
