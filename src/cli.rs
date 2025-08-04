@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{num::NonZeroU64, path::PathBuf};
 
 use clap::{Arg, ArgAction, Command, builder::ArgPredicate, value_parser};
 
@@ -337,7 +337,7 @@ speed up compression for large files. This option requires '--zopfli' to be set.
                 .long("zi")
                 .value_name("iterations")
                 .default_value("15")
-                .value_parser(1..=255)
+                .value_parser(value_parser!(NonZeroU64))
                 .requires("zopfli"),
         )
         .arg(

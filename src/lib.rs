@@ -41,6 +41,8 @@ use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 pub use rgb::{RGB16, RGBA8};
 
+#[cfg(feature = "zopfli")]
+pub use crate::deflate::ZopfliOptions;
 pub use crate::{
     colors::{BitDepth, ColorType},
     deflate::Deflater,
