@@ -116,7 +116,7 @@ impl TryFrom<u8> for BitDepth {
             4 => Ok(Self::Four),
             8 => Ok(Self::Eight),
             16 => Ok(Self::Sixteen),
-            _ => Err(PngError::new("Unexpected bit depth")),
+            _ => Err(PngError::InvalidData),
         }
     }
 }

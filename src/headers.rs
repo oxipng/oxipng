@@ -172,10 +172,7 @@ pub fn parse_next_chunk<'a>(
 
     let chunk_bytes = &byte_data[chunk_start..chunk_start + 4 + length as usize];
     if !fix_errors && crc32(chunk_bytes) != crc {
-        return Err(PngError::new(&format!(
-            "CRC Mismatch in {} chunk; May be recoverable by using --fix",
-            String::from_utf8_lossy(chunk_name)
-        )));
+        return Err(PngError::CRCMismatch(chunk_name.try_into().unwrap()));
     }
 
     let name: [u8; 4] = chunk_name.try_into().unwrap();
@@ -208,7 +205,7 @@ pub fn parse_ihdr_chunk(
             },
             4 => ColorType::GrayscaleAlpha,
             6 => ColorType::RGBA,
-            _ => return Err(PngError::new("Unexpected color type in header")),
+            _ => return Err(PngError::InvalidData),
         },
         bit_depth: byte_data[8].try_into()?,
         width: read_be_u32(&byte_data[0..4]),
@@ -216,7 +213,7 @@ pub fn parse_ihdr_chunk(
         interlaced: match interlaced {
             0 => false,
             1 => true,
-            _ => return Err(PngError::new("Unexpected interlacing in header")),
+            _ => return Err(PngError::InvalidData),
         },
     })
 }
@@ -226,7 +223,7 @@ fn palette_to_rgba(
     palette_data: Option<Vec<u8>>,
     trns_data: Option<Vec<u8>>,
 ) -> Result<Vec<RGBA8>, PngError> {
-    let palette_data = palette_data.ok_or_else(|| PngError::new("no palette in indexed image"))?;
+    let palette_data = palette_data.ok_or(PngError::ChunkMissing("PLTE"))?;
     let mut palette: Vec<_> = palette_data
         .chunks_exact(3)
         .map(|color| RGBA8::new(color[0], color[1], color[2], 255))
