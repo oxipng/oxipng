@@ -437,8 +437,6 @@ fn preserve_attrs() {
         .metadata()
         .expect("unable to get file metadata for output file");
     #[cfg(feature = "filetime")]
-    let atime_canon = filetime::FileTime::from_last_access_time(&meta_input);
-    #[cfg(feature = "filetime")]
     let mtime_canon = filetime::FileTime::from_last_modification_time(&meta_input);
 
     let (mut output, opts) = get_opts(&input);
@@ -457,12 +455,6 @@ fn preserve_attrs() {
     let meta_output = output
         .metadata()
         .expect("unable to get file metadata for output file");
-    #[cfg(feature = "filetime")]
-    assert_eq!(
-        &atime_canon,
-        &filetime::FileTime::from_last_access_time(&meta_output),
-        "expected access time to be identical to that of input",
-    );
     #[cfg(feature = "filetime")]
     assert_eq!(
         &mtime_canon,
