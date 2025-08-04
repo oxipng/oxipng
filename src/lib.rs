@@ -181,7 +181,9 @@ impl RawImage {
 }
 
 /// Perform optimization on the input file using the options provided
-pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<()> {
+///
+/// Returns the original and optimized file sizes
+pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(usize, usize)> {
     // Read in the file and try to decode as PNG.
     info!("Processing: {input}");
 
@@ -230,14 +232,14 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
 
     let in_length = in_data.len();
 
-    if is_fully_optimized(in_data.len(), optimized_output.len(), opts) {
+    if is_fully_optimized(in_length, optimized_output.len(), opts) {
         match (output, input) {
             // If output path is None, it also means same as the input path
             (OutFile::Path { path, .. }, InFile::Path(input_path))
                 if path.as_ref().is_none_or(|p| p == input_path) =>
             {
                 info!("{input}: Could not optimize further, no change written");
-                return Ok(());
+                return Ok((in_length, in_length));
             }
             _ => {
                 optimized_output = in_data;
@@ -305,7 +307,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
             info!("{}: {}", savings, output_path.display());
         }
     }
-    Ok(())
+    Ok((in_length, optimized_output.len()))
 }
 
 /// Perform optimization on the input file using the options provided, where the file is already
