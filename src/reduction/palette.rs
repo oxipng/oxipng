@@ -5,7 +5,6 @@ use crate::{
     colors::{BitDepth, ColorType},
     headers::IhdrData,
     png::{scan_lines::ScanLine, PngImage},
-    Interlacing,
 };
 
 /// Attempt to reduce the number of colors in the palette, returning the reduced image if successful
@@ -134,7 +133,7 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 #[must_use]
 pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced != Interlacing::None {
+    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
         return None;
     }
     let palette = match &png.ihdr.color_type {
@@ -156,7 +155,7 @@ pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
 #[must_use]
 pub fn sorted_palette_battiato(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced != Interlacing::None {
+    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
         return None;
     }
     let palette = match &png.ihdr.color_type {
