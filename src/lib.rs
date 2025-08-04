@@ -689,10 +689,9 @@ fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
 
 #[cfg(feature = "filetime")]
 fn copy_times(input_path_meta: &Metadata, out_path: &Path) -> PngResult<()> {
-    let atime = filetime::FileTime::from_last_access_time(input_path_meta);
     let mtime = filetime::FileTime::from_last_modification_time(input_path_meta);
-    trace!("attempting to set file times: atime: {atime:?}, mtime: {mtime:?}");
-    filetime::set_file_times(out_path, atime, mtime).map_err(|err_io| {
+    trace!("attempting to set file modification time: {mtime:?}");
+    filetime::set_file_mtime(out_path, mtime).map_err(|err_io| {
         PngError::new(&format!(
             "unable to set file times on {out_path:?}: {err_io}"
         ))
