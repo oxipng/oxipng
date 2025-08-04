@@ -5,7 +5,7 @@ use oxipng::{internal_tests::*, *};
 fn get_opts() -> Options {
     Options {
         force: true,
-        filter: indexset! {FilterStrategy::NONE},
+        filters: indexset! {FilterStrategy::NONE},
         ..Default::default()
     }
 }

@@ -43,7 +43,7 @@ pub use rgb::{RGB16, RGBA8};
 
 pub use crate::{
     colors::{BitDepth, ColorType},
-    deflate::Deflaters,
+    deflate::Deflater,
     error::PngError,
     filters::{FilterStrategy, RowFilter},
     headers::StripChunks,
@@ -146,7 +146,7 @@ impl RawImage {
     /// Add an ICC profile for the image
     pub fn add_icc_profile(&mut self, data: &[u8]) {
         // Compress with fastest compression level - will be recompressed during optimization
-        let deflater = Deflaters::Libdeflater { compression: 1 };
+        let deflater = Deflater::Libdeflater { compression: 1 };
         if let Ok(iccp) = make_iccp(data, deflater, None) {
             self.aux_chunks.push(iccp);
         }
@@ -422,16 +422,16 @@ fn optimize_raw(
     // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
     // 9 is not appreciably better than 8
     // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
-    let compression = match opts.deflate {
-        Deflaters::Libdeflater { compression } => {
+    let compression = match opts.deflater {
+        Deflater::Libdeflater { compression } => {
             if opts.fast_evaluation { 7 } else { 8 }.min(compression)
         }
         _ => 8,
     };
-    let eval_deflater = Deflaters::Libdeflater { compression };
+    let eval_deflater = Deflater::Libdeflater { compression };
     // If only one filter is selected, use this for evaluations
-    let eval_filters = if opts.filter.len() == 1 {
-        opts.filter.clone()
+    let eval_filters = if opts.filters.len() == 1 {
+        opts.filters.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
         indexset! {FilterStrategy::NONE, FilterStrategy::Bigrams}
@@ -442,7 +442,7 @@ fn optimize_raw(
         eval_filters.clone(),
         eval_deflater,
         false,
-        opts.deflate == eval_deflater,
+        opts.deflater == eval_deflater,
     );
     let mut new_image = perform_reductions(image.clone(), opts, &deadline, &eval);
     let eval_result = eval.get_best_candidate();
@@ -467,7 +467,7 @@ fn optimize_raw(
             eval_filters,
             eval_deflater,
         );
-        (result?, opts.deflate)
+        (result?, opts.deflater)
     } else {
         // If idat_recoding is off and reductions were attempted but ended up choosing the baseline,
         // we should still check if the evaluator compressed the baseline smaller than the original.
@@ -492,9 +492,9 @@ fn perform_trials(
     max_size: Option<usize>,
     mut eval_result: Option<Candidate>,
     eval_filters: IndexSet<FilterStrategy>,
-    eval_deflater: Deflaters,
+    eval_deflater: Deflater,
 ) -> Option<Candidate> {
-    let mut filters = opts.filter.clone();
+    let mut filters = opts.filters.clone();
     let fast_eval = opts.fast_evaluation && (filters.len() > 1 || eval_result.is_some());
     if fast_eval {
         // Perform a fast evaluation of selected filters followed by a single main compression trial
@@ -511,7 +511,7 @@ fn perform_trials(
                 filters,
                 eval_deflater,
                 opts.optimize_alpha,
-                opts.deflate == eval_deflater,
+                opts.deflater == eval_deflater,
             );
             if let Some(result) = &eval_result {
                 eval.set_best_size(result.estimated_output_size);
@@ -527,9 +527,9 @@ fn perform_trials(
 
         if result.idat_data.is_none() {
             // Compress with the main deflater
-            debug!("Trying filter {} with {}", result.filter, opts.deflate);
+            debug!("Trying filter {} with {}", result.filter, opts.deflater);
             let (data, _) = image.filter_image(result.filter_used.clone(), opts.optimize_alpha);
-            match opts.deflate.deflate(&data, max_size) {
+            match opts.deflater.deflate(&data, max_size) {
                 Ok(idat_data) => {
                     result.estimated_output_size = result.image.estimated_output_size(&idat_data);
                     result.idat_data = Some(idat_data);
@@ -557,8 +557,8 @@ fn perform_trials(
         }
     }
 
-    debug!("Trying {} filters with {}", filters.len(), opts.deflate);
-    let eval = Evaluator::new(deadline, filters, opts.deflate, opts.optimize_alpha, true);
+    debug!("Trying {} filters with {}", filters.len(), opts.deflater);
+    let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
     if let Some(max_size) = max_size {
         eval.set_best_size(max_size);
     }
@@ -650,7 +650,7 @@ fn recompress_frames(
             let image = PngImage::new(ihdr, &frame.data)?;
             let (filtered, _) = image.filter_image(filter.clone(), opts.optimize_alpha);
             let max_size = Some(frame.data.len() - 1);
-            if let Ok(data) = opts.deflate.deflate(&filtered, max_size) {
+            if let Ok(data) = opts.deflater.deflate(&filtered, max_size) {
                 debug!(
                     "Recompressed fdAT #{:<2}: {} ({} bytes decrease)",
                     i,

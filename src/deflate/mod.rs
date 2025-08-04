@@ -13,7 +13,7 @@ pub use zopfli_oxipng::deflate as zopfli_deflate;
 
 /// DEFLATE algorithms supported by oxipng (for use in [`Options`][crate::Options])
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Deflaters {
+pub enum Deflater {
     /// Use libdeflater.
     Libdeflater {
         /// Which compression level to use on the file (0-12)
@@ -29,7 +29,7 @@ pub enum Deflaters {
     },
 }
 
-impl Deflaters {
+impl Deflater {
     pub(crate) fn deflate(self, data: &[u8], max_size: Option<usize>) -> PngResult<Vec<u8>> {
         let compressed = match self {
             Self::Libdeflater { compression } => deflate(data, compression, max_size)?,
@@ -45,7 +45,7 @@ impl Deflaters {
     }
 }
 
-impl Display for Deflaters {
+impl Display for Deflater {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

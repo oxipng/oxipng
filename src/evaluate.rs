@@ -10,7 +10,7 @@ use std::sync::{
 
 #[cfg(feature = "parallel")]
 use crossbeam_channel::{Receiver, Sender, unbounded};
-use deflate::Deflaters;
+use deflate::Deflater;
 use indexmap::IndexSet;
 use log::trace;
 use rayon::prelude::*;
@@ -50,7 +50,7 @@ impl Candidate {
 pub(crate) struct Evaluator {
     deadline: Arc<Deadline>,
     filters: IndexSet<FilterStrategy>,
-    deflater: Deflaters,
+    deflater: Deflater,
     optimize_alpha: bool,
     final_round: bool,
     nth: AtomicUsize,
@@ -68,7 +68,7 @@ impl Evaluator {
     pub fn new(
         deadline: Arc<Deadline>,
         filters: IndexSet<FilterStrategy>,
-        deflater: Deflaters,
+        deflater: Deflater,
         optimize_alpha: bool,
         final_round: bool,
     ) -> Self {

@@ -14,7 +14,6 @@ const RGBA: u8 = 6;
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
     let options = oxipng::Options {
         force: true,
-        filter: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
     (OutFile::from_path(input.with_extension("out.png")), options)
@@ -32,8 +31,7 @@ fn test_it_converts(
 
     let (output, mut opts) = get_opts(&input);
     let png = PngData::new(&input, &opts).unwrap();
-    opts.filter = IndexSet::new();
-    opts.filter.insert(filter);
+    opts.filters = indexset! {filter};
     assert_eq!(png.raw.ihdr.color_type.png_header_code(), color_type_in);
     assert_eq!(png.raw.ihdr.bit_depth, bit_depth_in);
 

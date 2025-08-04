@@ -15,7 +15,7 @@ fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
     let options = oxipng::Options {
         force: true,
         fast_evaluation: false,
-        filter: indexset! {FilterStrategy::NONE},
+        filters: indexset! {FilterStrategy::NONE},
         interlace: None,
         ..Default::default()
     };

@@ -26,7 +26,7 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
-use oxipng::{Deflaters, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
+use oxipng::{Deflater, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -198,7 +198,7 @@ fn parse_opts_into_struct(
     };
 
     if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
-        opts.filter = x
+        opts.filters = x
             .iter()
             .map(|&f| match f {
                 0..=4 => FilterStrategy::Basic(f.try_into().unwrap()),
@@ -336,12 +336,12 @@ fn parse_opts_into_struct(
     #[cfg(feature = "zopfli")]
     if matches.get_flag("zopfli") {
         let iterations = *matches.get_one::<i64>("iterations").unwrap();
-        opts.deflate = Deflaters::Zopfli {
+        opts.deflater = Deflater::Zopfli {
             iterations: NonZeroU8::new(iterations as u8).unwrap(),
         };
     }
-    if let (Deflaters::Libdeflater { compression }, Some(x)) =
-        (&mut opts.deflate, matches.get_one::<i64>("compression"))
+    if let (Deflater::Libdeflater { compression }, Some(x)) =
+        (&mut opts.deflater, matches.get_one::<i64>("compression"))
     {
         *compression = *x as u8;
     }
