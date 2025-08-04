@@ -8,7 +8,6 @@ pub enum PngError {
     DeflatedDataTooLong(usize),
     TimedOut,
     NotPNG,
-    APNGNotSupported,
     APNGOutOfOrder,
     InvalidData,
     TruncatedData,
@@ -33,7 +32,6 @@ impl fmt::Display for PngError {
             PngError::TruncatedData => {
                 f.write_str("Missing data in the file; the file is truncated")
             }
-            PngError::APNGNotSupported => f.write_str("APNG files are not (yet) supported"),
             PngError::APNGOutOfOrder => f.write_str("APNG chunks are out of order"),
             PngError::ChunkMissing(s) => write!(f, "Chunk {s} missing or empty"),
             PngError::InvalidDepthForType(d, ref c) => {
