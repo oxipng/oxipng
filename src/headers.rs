@@ -8,7 +8,7 @@ use crate::{
     display_chunks::DISPLAY_CHUNKS,
     error::PngError,
     interlace::Interlacing,
-    Deflaters, Options, PngResult,
+    Deflater, Options, PngResult,
 };
 
 #[derive(Debug, Clone)]
@@ -276,7 +276,7 @@ pub fn extract_icc(iccp: &Chunk) -> Option<Vec<u8>> {
 }
 
 /// Make an iCCP chunk by compressing the ICC profile
-pub fn make_iccp(icc: &[u8], deflater: Deflaters, max_size: Option<usize>) -> PngResult<Chunk> {
+pub fn make_iccp(icc: &[u8], deflater: Deflater, max_size: Option<usize>) -> PngResult<Chunk> {
     let mut compressed = deflater.deflate(icc, max_size)?;
     let mut data = Vec::with_capacity(compressed.len() + 5);
     data.extend(b"icc"); // Profile name - generally unused, can be anything
@@ -348,7 +348,7 @@ pub fn preprocess_chunks(aux_chunks: &mut Vec<Chunk>, opts: &mut Options) {
             } else if opts.idat_recoding {
                 // Try recompressing the profile
                 let cur_len = aux_chunks[iccp_idx].data.len();
-                if let Ok(iccp) = make_iccp(&icc, opts.deflate, Some(cur_len - 1)) {
+                if let Ok(iccp) = make_iccp(&icc, opts.deflater, Some(cur_len - 1)) {
                     debug!(
                         "Recompressed iCCP chunk: {} ({} bytes decrease)",
                         iccp.data.len(),
