@@ -233,7 +233,7 @@ fn parse_opts_into_struct(
         None
     };
 
-    let out_file = if matches.get_flag("pretend") {
+    let out_file = if matches.get_flag("dry-run") {
         OutFile::None
     } else if matches.get_flag("stdout") {
         OutFile::StdOut

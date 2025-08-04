@@ -97,10 +97,10 @@ Note that this will not preserve the directory structure of the input files when
                 .action(ArgAction::SetTrue),
         )
         .arg(
-            Arg::new("pretend")
+            Arg::new("dry-run")
                 .help("Do not write any files, only show compression results")
-                .short('P')
-                .long("pretend")
+                .short('d')
+                .long("dry-run")
                 .action(ArgAction::SetTrue),
         )
         .arg(
