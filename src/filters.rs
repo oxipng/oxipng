@@ -19,6 +19,14 @@ pub enum FilterStrategy {
     Predefined(Vec<RowFilter>),
 }
 
+impl FilterStrategy {
+    pub const NONE: Self = Self::Basic(RowFilter::None);
+    pub const SUB: Self = Self::Basic(RowFilter::Sub);
+    pub const UP: Self = Self::Basic(RowFilter::Up);
+    pub const AVERAGE: Self = Self::Basic(RowFilter::Average);
+    pub const PAETH: Self = Self::Basic(RowFilter::Paeth);
+}
+
 impl Display for FilterStrategy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
