@@ -341,6 +341,17 @@ speed up compression for large files. This option requires '--zopfli' to be set.
                 .requires("zopfli"),
         )
         .arg(
+            Arg::new("iterations-without-improvement")
+                .hide_short_help(true)
+                .long_help("\
+Stop Zopfli compression after this number of iterations without improvement. Use this in \
+conjunction with a high value for '--zi' to achieve better compression in reasonable time.")
+                .long("ziwi")
+                .value_name("iterations")
+                .value_parser(value_parser!(NonZeroU64))
+                .requires("zopfli"),
+        )
+        .arg(
             Arg::new("timeout")
                 .help("Maximum amount of time to spend on optimizations")
                 .long_help("\

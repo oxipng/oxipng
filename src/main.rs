@@ -334,8 +334,12 @@ fn parse_opts_into_struct(
     #[cfg(feature = "zopfli")]
     if matches.get_flag("zopfli") {
         let iteration_count = *matches.get_one::<NonZeroU64>("iterations").unwrap();
+        let iterations_without_improvement = *matches
+            .get_one::<NonZeroU64>("iterations-without-improvement")
+            .unwrap_or(&NonZeroU64::MAX);
         opts.deflater = Deflater::Zopfli(ZopfliOptions {
             iteration_count,
+            iterations_without_improvement,
             ..Default::default()
         });
     }
