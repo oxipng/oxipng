@@ -110,7 +110,10 @@ fn filter_bigent() {
 fn filter_brute() {
     test_it_converts(
         "tests/files/palette_8_should_be_palette_8.png",
-        FilterStrategy::Brute,
+        FilterStrategy::Brute {
+            num_lines: 4,
+            level: 1,
+        },
         INDEXED,
         BitDepth::Eight,
         INDEXED,

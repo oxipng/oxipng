@@ -26,7 +26,7 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{error, warn, Level, LevelFilter};
-use oxipng::{Deflaters, InFile, Options, OutFile, PngError, StripChunks};
+use oxipng::{Deflaters, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -203,6 +203,21 @@ fn parse_opts_into_struct(
             opts.filter.insert(f.try_into().unwrap());
         }
     }
+
+    // Rebuild the filter set to apply any custom brute settings
+    let mut new_filters = IndexSet::new();
+    for mut f in opts.filter.drain(..) {
+        if let FilterStrategy::Brute { num_lines, level } = &mut f {
+            if let Some(new_lines) = matches.get_one::<usize>("brute-lines") {
+                *num_lines = *new_lines;
+            }
+            if let Some(new_level) = matches.get_one::<i64>("brute-level") {
+                *level = *new_level as u8;
+            }
+        }
+        new_filters.insert(f);
+    }
+    opts.filter = new_filters;
 
     if let Some(&num) = matches.get_one::<u64>("timeout") {
         opts.timeout = Some(Duration::from_secs(num));

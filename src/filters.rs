@@ -14,7 +14,12 @@ pub enum FilterStrategy {
     /// Shannon entropy of bigrams
     BigEnt,
     /// Deflate compression
-    Brute,
+    Brute {
+        /// The number of lines to compress at once
+        num_lines: usize,
+        /// The compression level to use (1-12)
+        level: u8,
+    },
     /// Predefined filter for each row
     Predefined(Vec<RowFilter>),
 }
@@ -35,7 +40,7 @@ impl Display for FilterStrategy {
             Self::Entropy => write!(f, "Entropy"),
             Self::Bigrams => write!(f, "Bigrams"),
             Self::BigEnt => write!(f, "BigEnt"),
-            Self::Brute => write!(f, "Brute"),
+            Self::Brute { .. } => write!(f, "Brute"),
             Self::Predefined(_) => write!(f, "Predefined"),
         }
     }
@@ -51,7 +56,10 @@ impl TryFrom<u8> for FilterStrategy {
             6 => Ok(Self::Entropy),
             7 => Ok(Self::Bigrams),
             8 => Ok(Self::BigEnt),
-            9 => Ok(Self::Brute),
+            9 => Ok(Self::Brute {
+                num_lines: 4,
+                level: 1,
+            }),
             _ => Err(()),
         }
     }
