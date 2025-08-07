@@ -21,11 +21,6 @@ pub(crate) mod scan_lines;
 
 use self::scan_lines::ScanLines;
 
-/// Compression level to use for the Brute filter strategy
-const BRUTE_LEVEL: i32 = 1; // 1 is fastest, 2-4 are not useful, 5 is slower but more effective
-/// Number of lines to compress with the Brute filter strategy
-const BRUTE_LINES: usize = 4; // Values over 8 are generally not useful
-
 #[derive(Debug, Clone)]
 pub struct PngImage {
     /// The headers stored in the IHDR chunk
@@ -509,15 +504,15 @@ impl PngImage {
                             }
                         }
                     }
-                    FilterStrategy::Brute => {
+                    FilterStrategy::Brute { num_lines, level } => {
                         // Brute force by compressing each filter attempt
                         // Similar to that of LodePNG but includes some previous lines for context
                         let mut best_size = usize::MAX;
                         let line_start = filtered.len();
                         filtered.resize(filtered.len() + line.data.len() + 1, 0);
                         let mut compressor =
-                            Compressor::new(CompressionLvl::new(BRUTE_LEVEL).unwrap());
-                        let limit = filtered.len().min((line.data.len() + 1) * BRUTE_LINES);
+                            Compressor::new(CompressionLvl::new(level.into()).unwrap());
+                        let limit = filtered.len().min((line.data.len() + 1) * num_lines);
                         let capacity = compressor.zlib_compress_bound(limit);
                         let mut dest = vec![0; capacity];
 

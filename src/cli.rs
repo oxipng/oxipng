@@ -32,14 +32,14 @@ Set the optimization level preset. The default level 2 is quite fast and provide
 compression. Lower levels are faster, higher levels provide better compression, though \
 with increasingly diminishing returns.
 
-    0   => --zc 5 --fast               (1 trial, determined heuristically)
-    1   => --zc 10 --fast              (1 trial, determined heuristically)
-    2   => --zc 11 -f 0,1,6,7 --fast   (4 fast trials, 1 main trial)
-    3   => --zc 11 -f 0,7,8,9          (4 trials)
-    4   => --zc 12 -f 0,7,8,9          (4 trials)
-    5   => --zc 12 -f 0,1,2,5,6,7,8,9  (8 trials)
-    6   => --zc 12 -f 0-9              (10 trials)
-    max =>                             (stable alias for the max level)
+    0   => --zc 5  --fast              (filter chosen heuristically)
+    1   => --zc 10 --fast              (filter chosen heuristically)
+    2   => --zc 11 -f 0,1,6,7 --fast
+    3   => --zc 11 -f 0,7,8,9         --brute-level 1 --brute-lines 3
+    4   => --zc 12 -f 0,7,8,9         --brute-level 1 --brute-lines 4
+    5   => --zc 12 -f 0,1,2,5,6,7,8,9 --brute-level 4 --brute-lines 4
+    6   => --zc 12 -f 0-9             --brute-level 5 --brute-lines 8
+    max => (stable alias for the maximum level)
 
 Manually specifying a compression option (zc, f, etc.) will override the optimization \
 preset, regardless of the order you write the arguments.")
@@ -352,6 +352,26 @@ conjunction with a high value for '--zi' to achieve better compression in reason
                 .value_name("iterations")
                 .value_parser(value_parser!(NonZeroU64))
                 .requires("zopfli"),
+        )
+        .arg(
+            Arg::new("brute-level")
+                .hide_short_help(true)
+                .long_help("\
+Set the libdeflate compression level to use with the Brute filter strategy. Sane values \
+are 1-5. Higher values are not necessarily better.")
+                .long("brute-level")
+                .value_name("level")
+                .value_parser(1..=12),
+        )
+        .arg(
+            Arg::new("brute-lines")
+                .hide_short_help(true)
+                .long_help("\
+Set the number of lines to compress at once with the Brute filter strategy. Sane values \
+are 2-16. Higher values are not necessarily better.")
+                .long("brute-lines")
+                .value_name("lines")
+                .value_parser(value_parser!(usize)),
         )
         .arg(
             Arg::new("timeout")
