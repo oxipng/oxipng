@@ -632,6 +632,8 @@ fn recompress_frames(
     if !opts.idat_recoding || png.frames.is_empty() {
         return Ok(());
     }
+    // Ensure we don't try to recompress frames with a predefined filter
+    debug_assert!(!matches!(filter, FilterStrategy::Predefined { .. }));
     png.frames
         .par_iter_mut()
         .with_max_len(1)
