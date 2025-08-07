@@ -212,24 +212,46 @@ impl Options {
             FilterStrategy::NONE,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
-            FilterStrategy::Brute
+            FilterStrategy::Brute {
+                num_lines: 3,
+                level: 1,
+            },
         };
         self
     }
 
     fn apply_preset_4(mut self) -> Self {
+        self.fast_evaluation = false;
+        self.filter = indexset! {
+            FilterStrategy::NONE,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 4,
+                level: 1,
+            },
+        };
         if let Deflaters::Libdeflater { compression } = &mut self.deflate {
             *compression = 12;
         }
-        self.apply_preset_3()
+        self
     }
 
     fn apply_preset_5(mut self) -> Self {
         self.fast_evaluation = false;
-        self.filter.insert(FilterStrategy::UP);
-        self.filter.insert(FilterStrategy::MinSum);
-        self.filter.insert(FilterStrategy::BigEnt);
-        self.filter.insert(FilterStrategy::Brute);
+        self.filter = indexset! {
+            FilterStrategy::NONE,
+            FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::MinSum,
+            FilterStrategy::Entropy,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 4,
+                level: 4,
+            },
+        };
         if let Deflaters::Libdeflater { compression } = &mut self.deflate {
             *compression = 12;
         }
@@ -237,9 +259,26 @@ impl Options {
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.filter.insert(FilterStrategy::AVERAGE);
-        self.filter.insert(FilterStrategy::PAETH);
-        self.apply_preset_5()
+        self.fast_evaluation = false;
+        self.filter = indexset! {
+            FilterStrategy::NONE,
+            FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::AVERAGE,
+            FilterStrategy::PAETH,
+            FilterStrategy::MinSum,
+            FilterStrategy::Entropy,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 8,
+                level: 5,
+            },
+        };
+        if let Deflaters::Libdeflater { compression } = &mut self.deflate {
+            *compression = 12;
+        }
+        self
     }
 }
 
