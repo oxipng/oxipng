@@ -4,7 +4,7 @@ categories = ["command-line-utilities", "compression"]
 description = "A lossless PNG compression optimizer"
 keywords = ["png", "image-compression", "optimization", "multi-threading", "lossless"]
 documentation = "https://docs.rs/oxipng"
-edition = "2021"
+edition = "2024"
 exclude = [
   ".editorconfig",
   ".gitattributes",
@@ -21,7 +21,7 @@ license = "MIT"
 name = "oxipng"
 repository = "https://github.com/oxipng/oxipng"
 version = "9.1.5"
-rust-version = "1.74.0"
+rust-version = "1.85.1"
 
 [badges]
 travis-ci = { repository = "oxipng/oxipng", branch = "master" }

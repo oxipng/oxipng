@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{value_parser, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, value_parser};
 
 include!("display_chunks.rs");
 

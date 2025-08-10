@@ -12,14 +12,14 @@ use rgb::ComponentSlice;
 use rustc_hash::FxHashMap;
 
 use crate::{
+    Options,
     apng::*,
     colors::{BitDepth, ColorType},
     deflate,
     error::PngError,
     filters::*,
     headers::*,
-    interlace::{deinterlace_image, interlace_image, Interlacing},
-    Options,
+    interlace::{Interlacing, deinterlace_image, interlace_image},
 };
 
 pub(crate) mod scan_lines;

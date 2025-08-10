@@ -2,10 +2,10 @@ use indexmap::IndexSet;
 use rgb::RGBA8;
 
 use crate::{
+    Interlacing,
     colors::{BitDepth, ColorType},
     headers::IhdrData,
-    png::{scan_lines::ScanLine, PngImage},
-    Interlacing,
+    png::{PngImage, scan_lines::ScanLine},
 };
 
 /// Attempt to reduce the number of colors in the palette, returning the reduced image if successful

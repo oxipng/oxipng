@@ -3,12 +3,12 @@ use log::{debug, trace, warn};
 use rgb::{RGB16, RGBA8};
 
 use crate::{
+    Deflaters, Options, PngResult,
     colors::{BitDepth, ColorType},
     deflate::{crc32, inflate},
     display_chunks::DISPLAY_CHUNKS,
     error::PngError,
     interlace::Interlacing,
-    Deflaters, Options, PngResult,
 };
 
 #[derive(Debug, Clone)]

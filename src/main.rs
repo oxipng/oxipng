@@ -25,7 +25,7 @@ use std::{
 use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
-use log::{error, warn, Level, LevelFilter};
+use log::{Level, LevelFilter, error, warn};
 use oxipng::{Deflaters, InFile, Options, OutFile, PngError, RowFilter, StripChunks};
 use rayon::prelude::*;
 

@@ -99,11 +99,11 @@ fn test_it_converts(
 fn verbose_mode() {
     use std::cell::RefCell;
     #[cfg(not(feature = "parallel"))]
-    use std::sync::mpsc::{channel as unbounded, Sender};
+    use std::sync::mpsc::{Sender, channel as unbounded};
 
     #[cfg(feature = "parallel")]
-    use crossbeam_channel::{unbounded, Sender};
-    use log::{set_logger, set_max_level, Level, LevelFilter, Log, Metadata, Record};
+    use crossbeam_channel::{Sender, unbounded};
+    use log::{Level, LevelFilter, Log, Metadata, Record, set_logger, set_max_level};
 
     // Rust runs tests in parallel by default.
     // We want to make sure that we verify only logs from our test.
