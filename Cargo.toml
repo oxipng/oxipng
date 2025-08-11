@@ -66,12 +66,12 @@ version = "1.10.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.41"
+version = "4.5.43"
 features = ["wrap_help"]
 
 [target.'cfg(windows)'.dependencies.glob]
 optional = true
-version = "0.3.2"
+version = "0.3.3"
 
 [dependencies.image]
 optional = true
