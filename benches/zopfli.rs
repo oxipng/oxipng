@@ -3,13 +3,10 @@
 extern crate oxipng;
 extern crate test;
 
-use std::{num::NonZeroU8, path::PathBuf};
+use std::path::PathBuf;
 
 use oxipng::{internal_tests::*, *};
 use test::Bencher;
-
-// SAFETY: trivially safe. Stopgap solution until const unwrap is stabilized.
-const DEFAULT_ZOPFLI_ITERATIONS: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(15) };
 
 #[bench]
 fn zopfli_16_bits_strategy_0(b: &mut Bencher) {
@@ -17,7 +14,7 @@ fn zopfli_16_bits_strategy_0(b: &mut Bencher) {
     let png = PngData::new(&input, &Options::default()).unwrap();
 
     b.iter(|| {
-        zopfli_deflate(png.raw.data.as_ref(), DEFAULT_ZOPFLI_ITERATIONS).ok();
+        zopfli_deflate(png.raw.data.as_ref(), ZopfliOptions::default()).ok();
     });
 }
 
@@ -27,7 +24,7 @@ fn zopfli_8_bits_strategy_0(b: &mut Bencher) {
     let png = PngData::new(&input, &Options::default()).unwrap();
 
     b.iter(|| {
-        zopfli_deflate(png.raw.data.as_ref(), DEFAULT_ZOPFLI_ITERATIONS).ok();
+        zopfli_deflate(png.raw.data.as_ref(), ZopfliOptions::default()).ok();
     });
 }
 
@@ -39,7 +36,7 @@ fn zopfli_4_bits_strategy_0(b: &mut Bencher) {
     let png = PngData::new(&input, &Options::default()).unwrap();
 
     b.iter(|| {
-        zopfli_deflate(png.raw.data.as_ref(), DEFAULT_ZOPFLI_ITERATIONS).ok();
+        zopfli_deflate(png.raw.data.as_ref(), ZopfliOptions::default()).ok();
     });
 }
 
@@ -51,7 +48,7 @@ fn zopfli_2_bits_strategy_0(b: &mut Bencher) {
     let png = PngData::new(&input, &Options::default()).unwrap();
 
     b.iter(|| {
-        zopfli_deflate(png.raw.data.as_ref(), DEFAULT_ZOPFLI_ITERATIONS).ok();
+        zopfli_deflate(png.raw.data.as_ref(), ZopfliOptions::default()).ok();
     });
 }
 
@@ -63,6 +60,6 @@ fn zopfli_1_bits_strategy_0(b: &mut Bencher) {
     let png = PngData::new(&input, &Options::default()).unwrap();
 
     b.iter(|| {
-        zopfli_deflate(png.raw.data.as_ref(), DEFAULT_ZOPFLI_ITERATIONS).ok();
+        zopfli_deflate(png.raw.data.as_ref(), ZopfliOptions::default()).ok();
     });
 }

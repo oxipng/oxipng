@@ -41,13 +41,14 @@ use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 pub use rgb::{RGB16, RGBA8};
 
+#[cfg(feature = "zopfli")]
+pub use crate::deflate::ZopfliOptions;
 pub use crate::{
     colors::{BitDepth, ColorType},
-    deflate::Deflaters,
+    deflate::Deflater,
     error::PngError,
     filters::RowFilter,
     headers::StripChunks,
-    interlace::Interlacing,
     options::{InFile, Options, OutFile},
 };
 use crate::{
@@ -130,7 +131,7 @@ impl RawImage {
                     height,
                     color_type,
                     bit_depth,
-                    interlaced: Interlacing::None,
+                    interlaced: false,
                 },
                 data,
             }),
@@ -146,7 +147,7 @@ impl RawImage {
     /// Add an ICC profile for the image
     pub fn add_icc_profile(&mut self, data: &[u8]) {
         // Compress with fastest compression level - will be recompressed during optimization
-        let deflater = Deflaters::Libdeflater { compression: 1 };
+        let deflater = Deflater::Libdeflater { compression: 1 };
         if let Ok(iccp) = make_iccp(data, deflater, None) {
             self.aux_chunks.push(iccp);
         }
@@ -181,7 +182,9 @@ impl RawImage {
 }
 
 /// Perform optimization on the input file using the options provided
-pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<()> {
+///
+/// Returns the original and optimized file sizes
+pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(usize, usize)> {
     // Read in the file and try to decode as PNG.
     info!("Processing: {input}");
 
@@ -230,14 +233,14 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
 
     let in_length = in_data.len();
 
-    if is_fully_optimized(in_data.len(), optimized_output.len(), opts) {
+    if is_fully_optimized(in_length, optimized_output.len(), opts) {
         match (output, input) {
             // if p is None, it also means same as the input path
             (OutFile::Path { path, .. }, InFile::Path(ref input_path))
                 if path.as_ref().map_or(true, |p| p == input_path) =>
             {
                 info!("{input}: Could not optimize further, no change written");
-                return Ok(());
+                return Ok((in_length, in_length));
             }
             _ => {
                 optimized_output = in_data;
@@ -261,7 +264,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
 
     match (output, input) {
         (OutFile::None, _) => {
-            info!("{savings}: Running in pretend mode, no output");
+            info!("{savings}: Dry run, no output");
         }
         (&OutFile::StdOut, _) | (&OutFile::Path { path: None, .. }, &InFile::StdIn) => {
             let mut buffer = BufWriter::new(stdout());
@@ -305,7 +308,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
             info!("{}: {}", savings, output_path.display());
         }
     }
-    Ok(())
+    Ok((in_length, optimized_output.len()))
 }
 
 /// Perform optimization on the input file using the options provided, where the file is already
@@ -395,7 +398,7 @@ fn optimize_png(
         );
     }
 
-    if opts.interlace == Some(Interlacing::Adam7) && png.raw.ihdr.interlaced != Interlacing::Adam7 {
+    if opts.interlace == Some(true) && !png.raw.ihdr.interlaced {
         warn!("Interlacing was not enabled as it would result in a larger file. To override this, use `--force`.");
     }
 
@@ -418,16 +421,16 @@ fn optimize_raw(
     // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
     // 9 is not appreciably better than 8
     // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
-    let compression = match opts.deflate {
-        Deflaters::Libdeflater { compression } => {
+    let compression = match opts.deflater {
+        Deflater::Libdeflater { compression } => {
             if opts.fast_evaluation { 7 } else { 8 }.min(compression)
         }
         _ => 8,
     };
-    let eval_deflater = Deflaters::Libdeflater { compression };
+    let eval_deflater = Deflater::Libdeflater { compression };
     // If only one filter is selected, use this for evaluations
-    let eval_filters = if opts.filter.len() == 1 {
-        opts.filter.clone()
+    let eval_filters = if opts.filters.len() == 1 {
+        opts.filters.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
         indexset! {RowFilter::None, RowFilter::Bigrams}
@@ -438,7 +441,7 @@ fn optimize_raw(
         eval_filters.clone(),
         eval_deflater,
         false,
-        opts.deflate == eval_deflater,
+        opts.deflater == eval_deflater,
     );
     let mut new_image = perform_reductions(image.clone(), opts, &deadline, &eval);
     let eval_result = eval.get_best_candidate();
@@ -463,7 +466,7 @@ fn optimize_raw(
             eval_filters,
             eval_deflater,
         );
-        (result?, opts.deflate)
+        (result?, opts.deflater)
     } else {
         // If idat_recoding is off and reductions were attempted but ended up choosing the baseline,
         // we should still check if the evaluator compressed the baseline smaller than the original.
@@ -488,9 +491,9 @@ fn perform_trials(
     max_size: Option<usize>,
     mut eval_result: Option<Candidate>,
     eval_filters: IndexSet<RowFilter>,
-    eval_deflater: Deflaters,
+    eval_deflater: Deflater,
 ) -> Option<Candidate> {
-    let mut filters = opts.filter.clone();
+    let mut filters = opts.filters.clone();
     let fast_eval = opts.fast_evaluation && (filters.len() > 1 || eval_result.is_some());
     if fast_eval {
         // Perform a fast evaluation of selected filters followed by a single main compression trial
@@ -507,7 +510,7 @@ fn perform_trials(
                 filters,
                 eval_deflater,
                 opts.optimize_alpha,
-                opts.deflate == eval_deflater,
+                opts.deflater == eval_deflater,
             );
             if let Some(result) = &eval_result {
                 eval.set_best_size(result.estimated_output_size);
@@ -523,8 +526,8 @@ fn perform_trials(
 
         if !result.data_is_compressed {
             // Compress with the main deflater
-            debug!("Trying filter {} with {}", result.filter, opts.deflate);
-            match opts.deflate.deflate(&result.data, max_size) {
+            debug!("Trying filter {} with {}", result.filter, opts.deflater);
+            match opts.deflater.deflate(&result.data, max_size) {
                 Ok(idat_data) => {
                     result.estimated_output_size = result.image.estimated_output_size(&idat_data);
                     result.data = idat_data;
@@ -553,8 +556,8 @@ fn perform_trials(
         }
     }
 
-    debug!("Trying {} filters with {}", filters.len(), opts.deflate);
-    let eval = Evaluator::new(deadline, filters, opts.deflate, opts.optimize_alpha, true);
+    debug!("Trying {} filters with {}", filters.len(), opts.deflater);
+    let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
     if let Some(max_size) = max_size {
         eval.set_best_size(max_size);
     }
@@ -614,9 +617,14 @@ impl Deadline {
 
 /// Display the format of the image data
 fn report_format(prefix: &str, png: &PngImage) {
+    let interlaced = if png.ihdr.interlaced {
+        "interlaced"
+    } else {
+        "non-interlaced"
+    };
     debug!(
         "{}{}-bit {}, {}",
-        prefix, png.ihdr.bit_depth, png.ihdr.color_type, png.ihdr.interlaced
+        prefix, png.ihdr.bit_depth, png.ihdr.color_type, interlaced
     );
 }
 
@@ -644,7 +652,7 @@ fn recompress_frames(
             let image = PngImage::new(ihdr, &frame.data)?;
             let filtered = image.filter_image(filter, opts.optimize_alpha);
             let max_size = Some(frame.data.len() - 1);
-            if let Ok(data) = opts.deflate.deflate(&filtered, max_size) {
+            if let Ok(data) = opts.deflater.deflate(&filtered, max_size) {
                 debug!(
                     "Recompressed fdAT #{:<2}: {} ({} bytes decrease)",
                     i,
@@ -679,10 +687,9 @@ fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
 
 #[cfg(feature = "filetime")]
 fn copy_times(input_path_meta: &Metadata, out_path: &Path) -> PngResult<()> {
-    let atime = filetime::FileTime::from_last_access_time(input_path_meta);
     let mtime = filetime::FileTime::from_last_modification_time(input_path_meta);
-    trace!("attempting to set file times: atime: {atime:?}, mtime: {mtime:?}");
-    filetime::set_file_times(out_path, atime, mtime).map_err(|err_io| {
+    trace!("attempting to set file modification time: {mtime:?}");
+    filetime::set_file_mtime(out_path, mtime).map_err(|err_io| {
         PngError::new(&format!(
             "unable to set file times on {out_path:?}: {err_io}"
         ))

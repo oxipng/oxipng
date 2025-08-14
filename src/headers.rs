@@ -7,8 +7,7 @@ use crate::{
     deflate::{crc32, inflate},
     display_chunks::DISPLAY_CHUNKS,
     error::PngError,
-    interlace::Interlacing,
-    Deflaters, Options, PngResult,
+    Deflater, Options, PngResult,
 };
 
 #[derive(Debug, Clone)]
@@ -22,8 +21,8 @@ pub struct IhdrData {
     pub color_type: ColorType,
     /// The bit depth of the image
     pub bit_depth: BitDepth,
-    /// The interlacing mode of the image
-    pub interlaced: Interlacing,
+    /// Whether the image is interlaced
+    pub interlaced: bool,
 }
 
 impl IhdrData {
@@ -45,7 +44,7 @@ impl IhdrData {
             (w * bpp).div_ceil(8) * h
         }
 
-        if self.interlaced == Interlacing::None {
+        if !self.interlaced {
             bitmap_size(bpp, w, h) + h
         } else {
             let mut size = bitmap_size(bpp, (w + 7) >> 3, (h + 7) >> 3) + ((h + 7) >> 3);
@@ -214,7 +213,11 @@ pub fn parse_ihdr_chunk(
         bit_depth: byte_data[8].try_into()?,
         width: read_be_u32(&byte_data[0..4]),
         height: read_be_u32(&byte_data[4..8]),
-        interlaced: interlaced.try_into()?,
+        interlaced: match interlaced {
+            0 => false,
+            1 => true,
+            _ => return Err(PngError::new("Unexpected interlacing in header")),
+        },
     })
 }
 
@@ -276,7 +279,7 @@ pub fn extract_icc(iccp: &Chunk) -> Option<Vec<u8>> {
 }
 
 /// Make an iCCP chunk by compressing the ICC profile
-pub fn make_iccp(icc: &[u8], deflater: Deflaters, max_size: Option<usize>) -> PngResult<Chunk> {
+pub fn make_iccp(icc: &[u8], deflater: Deflater, max_size: Option<usize>) -> PngResult<Chunk> {
     let mut compressed = deflater.deflate(icc, max_size)?;
     let mut data = Vec::with_capacity(compressed.len() + 5);
     data.extend(b"icc"); // Profile name - generally unused, can be anything
@@ -348,7 +351,7 @@ pub fn preprocess_chunks(aux_chunks: &mut Vec<Chunk>, opts: &mut Options) {
             } else if opts.idat_recoding {
                 // Try recompressing the profile
                 let cur_len = aux_chunks[iccp_idx].data.len();
-                if let Ok(iccp) = make_iccp(&icc, opts.deflate, Some(cur_len - 1)) {
+                if let Ok(iccp) = make_iccp(&icc, opts.deflater, Some(cur_len - 1)) {
                     debug!(
                         "Recompressed iCCP chunk: {} ({} bytes decrease)",
                         iccp.data.len(),
