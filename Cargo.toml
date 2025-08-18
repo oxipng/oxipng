@@ -62,11 +62,11 @@ version = "0.2.25"
 
 [dependencies.rayon]
 optional = true
-version = "1.10.0"
+version = "1.11.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.43"
+version = "4.5.45"
 features = ["wrap_help"]
 
 [target.'cfg(windows)'.dependencies.glob]
