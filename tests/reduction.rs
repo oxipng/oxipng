@@ -12,15 +12,12 @@ const GRAYSCALE_ALPHA: u8 = 4;
 const RGBA: u8 = 6;
 
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
-    let mut options = oxipng::Options {
+    let options = oxipng::Options {
         force: true,
         fast_evaluation: false,
+        filter: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
-    let mut filter = IndexSet::new();
-    filter.insert(RowFilter::None);
-    options.filter = filter;
-
     (OutFile::from_path(input.with_extension("out.png")), options)
 }
 

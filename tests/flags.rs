@@ -16,7 +16,7 @@ fn get_opts(input: &Path) -> (OutFile, Options) {
     let options = Options {
         force: true,
         fast_evaluation: false,
-        filter: indexset! {RowFilter::None},
+        filter: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
     (OutFile::from_path(input.with_extension("out.png")), options)
@@ -409,7 +409,7 @@ fn interlaced_0_to_1_other_filter_mode() {
     let input = PathBuf::from("tests/files/interlaced_0_to_1_other_filter_mode.png");
     let (output, mut opts) = get_opts(&input);
     opts.interlace = Some(Interlacing::Adam7);
-    opts.filter = indexset! {RowFilter::Paeth};
+    opts.filter = indexset! {FilterStrategy::PAETH};
 
     test_it_converts_callbacks(
         input,

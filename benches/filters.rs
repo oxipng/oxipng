@@ -13,7 +13,7 @@ fn filters_16_bits_filter_0(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_16_should_be_rgb_16.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::None, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::NONE, false));
 }
 
 #[bench]
@@ -21,7 +21,7 @@ fn filters_8_bits_filter_0(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::None, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::NONE, false));
 }
 
 #[bench]
@@ -31,7 +31,7 @@ fn filters_4_bits_filter_0(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::None, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::NONE, false));
 }
 
 #[bench]
@@ -41,7 +41,7 @@ fn filters_2_bits_filter_0(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::None, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::NONE, false));
 }
 
 #[bench]
@@ -51,7 +51,7 @@ fn filters_1_bits_filter_0(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::None, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::NONE, false));
 }
 
 #[bench]
@@ -59,7 +59,7 @@ fn filters_16_bits_filter_1(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_16_should_be_rgb_16.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Sub, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::SUB, false));
 }
 
 #[bench]
@@ -67,7 +67,7 @@ fn filters_8_bits_filter_1(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Sub, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::SUB, false));
 }
 
 #[bench]
@@ -77,7 +77,7 @@ fn filters_4_bits_filter_1(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Sub, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::SUB, false));
 }
 
 #[bench]
@@ -87,7 +87,7 @@ fn filters_2_bits_filter_1(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Sub, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::SUB, false));
 }
 
 #[bench]
@@ -97,7 +97,7 @@ fn filters_1_bits_filter_1(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Sub, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::SUB, false));
 }
 
 #[bench]
@@ -105,7 +105,7 @@ fn filters_16_bits_filter_2(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_16_should_be_rgb_16.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Up, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::UP, false));
 }
 
 #[bench]
@@ -113,7 +113,7 @@ fn filters_8_bits_filter_2(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Up, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::UP, false));
 }
 
 #[bench]
@@ -123,7 +123,7 @@ fn filters_4_bits_filter_2(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Up, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::UP, false));
 }
 
 #[bench]
@@ -133,7 +133,7 @@ fn filters_2_bits_filter_2(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Up, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::UP, false));
 }
 
 #[bench]
@@ -143,7 +143,7 @@ fn filters_1_bits_filter_2(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Up, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::UP, false));
 }
 
 #[bench]
@@ -151,7 +151,7 @@ fn filters_16_bits_filter_3(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_16_should_be_rgb_16.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Average, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::AVERAGE, false));
 }
 
 #[bench]
@@ -159,7 +159,7 @@ fn filters_8_bits_filter_3(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Average, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::AVERAGE, false));
 }
 
 #[bench]
@@ -169,7 +169,7 @@ fn filters_4_bits_filter_3(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Average, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::AVERAGE, false));
 }
 
 #[bench]
@@ -179,7 +179,7 @@ fn filters_2_bits_filter_3(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Average, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::AVERAGE, false));
 }
 
 #[bench]
@@ -189,7 +189,7 @@ fn filters_1_bits_filter_3(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Average, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::AVERAGE, false));
 }
 
 #[bench]
@@ -197,7 +197,7 @@ fn filters_16_bits_filter_4(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_16_should_be_rgb_16.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Paeth, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::PAETH, false));
 }
 
 #[bench]
@@ -205,7 +205,7 @@ fn filters_8_bits_filter_4(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Paeth, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::PAETH, false));
 }
 
 #[bench]
@@ -215,7 +215,7 @@ fn filters_4_bits_filter_4(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Paeth, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::PAETH, false));
 }
 
 #[bench]
@@ -225,7 +225,7 @@ fn filters_2_bits_filter_4(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Paeth, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::PAETH, false));
 }
 
 #[bench]
@@ -235,7 +235,7 @@ fn filters_1_bits_filter_4(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::Paeth, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::PAETH, false));
 }
 
 #[bench]
@@ -243,7 +243,7 @@ fn filters_16_bits_filter_5(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_16_should_be_rgb_16.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::MinSum, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::MinSum, false));
 }
 
 #[bench]
@@ -251,7 +251,7 @@ fn filters_8_bits_filter_5(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::MinSum, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::MinSum, false));
 }
 
 #[bench]
@@ -261,7 +261,7 @@ fn filters_4_bits_filter_5(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::MinSum, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::MinSum, false));
 }
 
 #[bench]
@@ -271,7 +271,7 @@ fn filters_2_bits_filter_5(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::MinSum, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::MinSum, false));
 }
 
 #[bench]
@@ -281,5 +281,5 @@ fn filters_1_bits_filter_5(b: &mut Bencher) {
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| png.raw.filter_image(RowFilter::MinSum, false));
+    b.iter(|| png.raw.filter_image(FilterStrategy::MinSum, false));
 }
