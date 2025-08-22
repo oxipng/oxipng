@@ -2,7 +2,7 @@ use std::{error::Error, fmt};
 
 use crate::colors::{BitDepth, ColorType};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum PngError {
     APNGOutOfOrder,
@@ -15,7 +15,9 @@ pub enum PngError {
     InvalidData,
     InvalidDepthForType(BitDepth, ColorType),
     NotPNG,
+    ReadFailed(String, std::io::Error),
     TruncatedData,
+    WriteFailed(String, std::io::Error),
     Other(Box<str>),
 }
 
@@ -47,9 +49,11 @@ impl fmt::Display for PngError {
                 write!(f, "Invalid bit depth {d} for color type {c}")
             }
             PngError::NotPNG => f.write_str("Invalid header detected; Not a PNG file"),
+            PngError::ReadFailed(ref s, ref e) => write!(f, "Failed to read from {s}: {e}"),
             PngError::TruncatedData => {
                 f.write_str("Missing data in the file; the file is truncated")
             }
+            PngError::WriteFailed(ref s, ref e) => write!(f, "Failed to write to {s}: {e}"),
             PngError::Other(ref s) => f.write_str(s),
         }
     }
