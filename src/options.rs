@@ -154,6 +154,11 @@ pub struct Options {
     ///
     /// Default: `None`
     pub timeout: Option<Duration>,
+    /// Maximum decompressed size of the input IDAT.
+    /// If decompression would exceed this size, it will be rejected.
+    ///
+    /// Default: `None`
+    pub max_decompressed_size: Option<usize>,
 }
 
 impl Options {
@@ -263,6 +268,7 @@ impl Default for Options {
             deflater: Deflater::Libdeflater { compression: 11 },
             fast_evaluation: true,
             timeout: None,
+            max_decompressed_size: None,
         }
     }
 }

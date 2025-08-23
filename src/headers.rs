@@ -248,7 +248,7 @@ pub fn read_be_u32(bytes: &[u8]) -> u32 {
 }
 
 /// Extract and decompress the ICC profile from an iCCP chunk
-pub fn extract_icc(iccp: &Chunk) -> Option<Vec<u8>> {
+pub fn extract_icc(iccp: &Chunk, max_size: Option<usize>) -> Option<Vec<u8>> {
     // Skip (useless) profile name
     let mut data = iccp.data.as_slice();
     loop {
@@ -264,8 +264,11 @@ pub fn extract_icc(iccp: &Chunk) -> Option<Vec<u8>> {
         return None; // The profile is supposed to be compressed (method 0)
     }
     // The decompressed size is unknown so we have to guess the required buffer size
-    let max_size = compressed_data.len() * 2 + 1000;
-    match inflate(compressed_data, max_size) {
+    let mut out_size = compressed_data.len() * 2 + 1000;
+    if let Some(max) = max_size {
+        out_size = out_size.min(max);
+    }
+    match inflate(compressed_data, out_size) {
         Ok(icc) => Some(icc),
         Err(e) => {
             // Log the error so we can know if the buffer size needs to be adjusted
@@ -331,7 +334,7 @@ pub fn preprocess_chunks(aux_chunks: &mut Vec<Chunk>, opts: &mut Options) {
             trace!("Removing iCCP chunk due to conflict with sRGB chunk");
             aux_chunks.remove(iccp_idx);
             allow_grayscale = true;
-        } else if let Some(icc) = extract_icc(&aux_chunks[iccp_idx]) {
+        } else if let Some(icc) = extract_icc(&aux_chunks[iccp_idx], opts.max_decompressed_size) {
             let intent = if may_replace_iccp {
                 srgb_rendering_intent(&icc)
             } else {

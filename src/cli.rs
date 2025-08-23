@@ -1,6 +1,7 @@
 use std::{num::NonZeroU64, path::PathBuf};
 
 use clap::{Arg, ArgAction, Command, builder::ArgPredicate, value_parser};
+use parse_size::parse_size;
 
 include!("display_chunks.rs");
 
@@ -364,6 +365,21 @@ high compression levels.")
                 .long("timeout")
                 .value_name("secs")
                 .value_parser(value_parser!(u64)),
+        )
+        .arg(
+            Arg::new("max-size")
+                .help("Skip image if the decompressed size exceeds this limit")
+                .long_help("\
+Maximum size to allow for the input image. If the raw, decompressed image data (or the \
+file size) of the image exceeds this size, it will be skipped. This is useful for limiting \
+memory usage or avoiding long processing times on large images. The value may be specified \
+with a unit suffix such as k, KB, m, MB, etc.
+
+The decompressed size of an image is roughly equal to width * height * bit-depth / 8. E.g. \
+a 1920x1080 image with 24-bit color depth would be roughly 6MB.")
+                .long("max-raw-size")
+                .value_name("bytes")
+                .value_parser(|s: &str| parse_size(s)),
         )
         .arg(
             Arg::new("threads")

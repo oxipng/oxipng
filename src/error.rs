@@ -43,7 +43,10 @@ impl fmt::Display for PngError {
                 f,
                 "Data length {l1} does not match the expected length {l2}"
             ),
-            PngError::InflatedDataTooLong(_) => f.write_str("Inflated data too long"),
+            PngError::InflatedDataTooLong(max) => write!(
+                f,
+                "Inflated data would exceed the maximum size ({max} bytes)"
+            ),
             PngError::InvalidData => f.write_str("Invalid data found; unable to read PNG file"),
             PngError::InvalidDepthForType(d, ref c) => {
                 write!(f, "Invalid bit depth {d} for color type {c}")
