@@ -1,25 +1,2 @@
 [alias]
 xtask = "run --manifest-path xtask/Cargo.toml --"
-
-[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))']
-runner = "qemu-aarch64" # May need to remove this if targeting AArch64 from an AArch64 Linux box
-
-[target.aarch64-unknown-linux-gnu]
-linker = "aarch64-linux-gnu-gcc"
-
-[target.aarch64-unknown-linux-musl]
-linker = "aarch64-linux-musl-gcc"
-# AArch64 Linux musl targets are repeatedly affected under varying
-# circumstances by fixedn't linking issues to compiler builtin symbols.
-# Linking to libgcc, though arguably an inelegant hack that's only portable
-# to our glibc from musl crosscompilation scenario, is effective to reliably
-# provide an implementation of those fundamental symbols over time, without
-# user-visible impacts on the final executables. See:
-# https://github.com/rust-lang/rust/issues/46651
-# https://github.com/rust-lang/compiler-builtins/issues/201
-# https://github.com/rust-lang/rust/issues/128401 (the issue most relevant to
-# our observed failures)
-# Note that these flags are not enforced on CI because CI overrides them through
-# the RUSTFLAG environment variable. Check out the CI workflow definition file at
-# .github/workflows/oxipng.yml for more info
-rustflags = ["-Clink-args=-lgcc"]
