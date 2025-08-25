@@ -2,7 +2,7 @@
 # check=error=true
 FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
 
-FROM --platform=$BUILDPLATFORM rust:1.74-alpine AS base
+FROM --platform=$BUILDPLATFORM rust:1.85.1-alpine AS base
 
 RUN apk update && \
     apk add \

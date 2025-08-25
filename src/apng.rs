@@ -1,9 +1,9 @@
 use std::io::Write;
 
 use crate::{
+    PngResult,
     error::PngError,
     headers::{read_be_u16, read_be_u32},
-    PngResult,
 };
 
 #[derive(Debug, Clone)]

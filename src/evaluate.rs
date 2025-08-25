@@ -4,12 +4,12 @@
 #[cfg(not(feature = "parallel"))]
 use std::cell::RefCell;
 use std::sync::{
-    atomic::{AtomicUsize, Ordering::*},
     Arc,
+    atomic::{AtomicUsize, Ordering::*},
 };
 
 #[cfg(feature = "parallel")]
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use deflate::Deflaters;
 use indexmap::IndexSet;
 use log::trace;
@@ -17,7 +17,7 @@ use rayon::prelude::*;
 
 #[cfg(not(feature = "parallel"))]
 use crate::rayon;
-use crate::{atomicmin::AtomicMin, deflate, filters::RowFilter, png::PngImage, Deadline, PngError};
+use crate::{Deadline, PngError, atomicmin::AtomicMin, deflate, filters::RowFilter, png::PngImage};
 
 pub(crate) struct Candidate {
     pub image: Arc<PngImage>,
@@ -30,7 +30,7 @@ pub(crate) struct Candidate {
 }
 
 impl Candidate {
-    fn cmp_key(&self) -> impl Ord {
+    fn cmp_key(&self) -> impl Ord + use<> {
         (
             self.estimated_output_size,
             self.image.data.len(),
@@ -161,10 +161,7 @@ impl Evaluator {
                     best_candidate_size.set_min(estimated_output_size);
                     trace!(
                         "Eval: {}-bit {:23} {:8}   {} bytes",
-                        image.ihdr.bit_depth,
-                        description,
-                        filter,
-                        estimated_output_size
+                        image.ihdr.bit_depth, description, filter, estimated_output_size
                     );
 
                     #[cfg(feature = "parallel")]
@@ -182,10 +179,7 @@ impl Evaluator {
                 } else if let Err(PngError::DeflatedDataTooLong(size)) = idat_data {
                     trace!(
                         "Eval: {}-bit {:23} {:8}  >{} bytes",
-                        image.ihdr.bit_depth,
-                        description,
-                        filter,
-                        size
+                        image.ihdr.bit_depth, description, filter, size
                     );
                 }
             });

@@ -8,8 +8,7 @@ use std::{num::NonZeroU8, path::PathBuf};
 use oxipng::{internal_tests::*, *};
 use test::Bencher;
 
-// SAFETY: trivially safe. Stopgap solution until const unwrap is stabilized.
-const DEFAULT_ZOPFLI_ITERATIONS: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(15) };
+const DEFAULT_ZOPFLI_ITERATIONS: NonZeroU8 = NonZeroU8::new(15).unwrap();
 
 #[bench]
 fn zopfli_16_bits_strategy_0(b: &mut Bencher) {

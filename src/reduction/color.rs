@@ -1,7 +1,7 @@
 use std::hash::{BuildHasherDefault, Hash};
 
 use indexmap::IndexSet;
-use rgb::{alt::Gray, ComponentMap, ComponentSlice, FromSlice, RGB, RGBA};
+use rgb::{ComponentMap, ComponentSlice, FromSlice, RGB, RGBA, alt::Gray};
 use rustc_hash::FxHasher;
 
 use crate::{

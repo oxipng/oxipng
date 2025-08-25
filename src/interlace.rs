@@ -2,7 +2,7 @@ use std::{fmt, fmt::Display};
 
 use bitvec::prelude::*;
 
-use crate::{headers::IhdrData, png::PngImage, PngError};
+use crate::{PngError, headers::IhdrData, png::PngImage};
 
 /// Whether to enable progressive rendering. See [`Options`][crate::Options])
 #[repr(u8)]

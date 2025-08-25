@@ -27,16 +27,16 @@ mod rayon;
 
 use std::{
     fs::{File, Metadata},
-    io::{stdin, stdout, BufWriter, Read, Write},
+    io::{BufWriter, Read, Write, stdin, stdout},
     path::Path,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::{Duration, Instant},
 };
 
-pub use indexmap::{indexset, IndexSet};
+pub use indexmap::{IndexSet, indexset};
 use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 pub use rgb::{RGB16, RGBA8};
@@ -232,9 +232,9 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
 
     if is_fully_optimized(in_data.len(), optimized_output.len(), opts) {
         match (output, input) {
-            // if p is None, it also means same as the input path
-            (OutFile::Path { path, .. }, InFile::Path(ref input_path))
-                if path.as_ref().map_or(true, |p| p == input_path) =>
+            // If output path is None, it also means same as the input path
+            (OutFile::Path { path, .. }, InFile::Path(input_path))
+                if path.as_ref().is_none_or(|p| p == input_path) =>
             {
                 info!("{input}: Could not optimize further, no change written");
                 return Ok(());
@@ -396,7 +396,9 @@ fn optimize_png(
     }
 
     if opts.interlace == Some(Interlacing::Adam7) && png.raw.ihdr.interlaced != Interlacing::Adam7 {
-        warn!("Interlacing was not enabled as it would result in a larger file. To override this, use `--force`.");
+        warn!(
+            "Interlacing was not enabled as it would result in a larger file. To override this, use `--force`."
+        );
     }
 
     #[cfg(feature = "sanity-checks")]
@@ -471,7 +473,7 @@ fn optimize_raw(
     };
 
     if result.data_is_compressed
-        && max_size.map_or(true, |max_size| result.estimated_output_size < max_size)
+        && max_size.is_none_or(|max_size| result.estimated_output_size < max_size)
     {
         debug!("Found better result:");
         debug!("    {}, f = {}", deflater, result.filter);

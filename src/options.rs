@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use indexmap::{indexset, IndexSet};
+use indexmap::{IndexSet, indexset};
 use log::warn;
 
 use crate::{deflate::Deflaters, filters::RowFilter, headers::StripChunks, interlace::Interlacing};

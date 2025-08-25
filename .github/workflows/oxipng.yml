@@ -33,16 +33,16 @@ jobs:
 
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             target-apt-arch: amd64
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             target-apt-arch: amd64
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
+            os: ubuntu-24.04-arm
             target-apt-arch: arm64
           - target: aarch64-unknown-linux-musl
-            os: ubuntu-22.04
+            os: ubuntu-24.04-arm
             target-apt-arch: arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -51,13 +51,11 @@ jobs:
           - target: x86_64-apple-darwin
             os: macos-13 # x86_64 runner
           - target: aarch64-apple-darwin
-            os: macos-14 # ARM64 runner
+            os: macos-15 # ARM64 runner
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
-      # Hopefully temporary workaround for https://github.com/rust-lang/rust/issues/128401
-      # See the comments for similar rustflag settings at .cargo/config.toml for more context
-      RUSTFLAGS: ${{ matrix.target == 'aarch64-unknown-linux-musl' && '-Zlocation-detail=none -Clink-args=-lgcc' || '-Zlocation-detail=none' }}
+      RUSTFLAGS: '-Zlocation-detail=none'
 
     steps:
       - name: Checkout source
@@ -65,31 +63,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Ubuntu multiarch
-        if: startsWith(matrix.os, 'ubuntu') && matrix.target-apt-arch != 'amd64'
-        run: |
-          readonly DISTRO_CODENAME=jammy
-          sudo dpkg --add-architecture "${{ matrix.target-apt-arch }}"
-          sudo sed -i "s/^deb http/deb [arch=$(dpkg-architecture -q DEB_HOST_ARCH)] http/" /etc/apt/sources.list
-          sudo sed -i "s/^deb mirror/deb [arch=$(dpkg-architecture -q DEB_HOST_ARCH)] mirror/" /etc/apt/sources.list
-          for suite in '' '-updates' '-backports' '-security'; do
-            echo "deb [arch=${{ matrix.target-apt-arch }}] http://ports.ubuntu.com/ $DISTRO_CODENAME$suite main universe multiverse" | \
-            sudo tee -a /etc/apt/sources.list >/dev/null
-          done
-
       - name: Install musl development files
         if: endsWith(matrix.target, '-musl')
         run: |
           sudo apt-get -yq update
           sudo apt-get -yq install musl-tools musl-dev:${{ matrix.target-apt-arch }}
-
-      - name: Install QEMU and AArch64 cross compiler
-        if: startsWith(matrix.target, 'aarch64-unknown-linux')
-        run: |
-          sudo apt-get -yq update
-          # libc6 must be present to run executables dynamically linked
-          # against glibc for the target architecture
-          sudo apt-get -yq install qemu-user gcc-aarch64-linux-gnu libc6:arm64
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -183,7 +161,7 @@ jobs:
       - name: Install MSRV Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: 1.74.0
+          toolchain: 1.85.1
           cache-bin: false
           cache-shared-key: cache
 

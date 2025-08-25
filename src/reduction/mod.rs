@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{evaluate::Evaluator, png::PngImage, ColorType, Deadline, Deflaters, Options};
+use crate::{ColorType, Deadline, Deflaters, Options, evaluate::Evaluator, png::PngImage};
 
 pub mod alpha;
 use crate::alpha::*;
@@ -183,7 +183,7 @@ pub(crate) fn perform_reductions(
         if (!cheap || reduced.is_none()) && !deadline.passed() {
             if let Some(indexed) = indexed.and_then(|png| reduced_bit_depth_8_or_less(&png)) {
                 // Only evaluate this if it's different from the first result (which must be grayscale if it exists)
-                if reduced.as_ref().map_or(true, |r| r.data != indexed.data) {
+                if reduced.as_ref().is_none_or(|r| r.data != indexed.data) {
                     eval.try_image(Arc::new(indexed));
                     evaluation_added = true;
                 }
