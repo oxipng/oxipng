@@ -164,21 +164,21 @@ transformation and may be unsuitable for some applications.")
         )
         .arg(
             Arg::new("interlace")
-                .help("Set PNG interlacing type (0, 1, keep)")
+                .help("Set PNG interlacing (off, on, keep)")
                 .long_help("\
-Set the PNG interlacing type, where <type> is one of:
+Set the PNG interlacing mode, where <mode> is one of:
 
-    0     =>  Remove interlacing from all images that are processed
-    1     =>  Apply Adam7 interlacing on all images that are processed
-    keep  =>  Keep the existing interlacing type of each image
+    off   =>  Remove interlacing from all images that are processed
+    on    =>  Apply Adam7 interlacing on all images that are processed
+    keep  =>  Keep the existing interlacing mode of each image
 
 Note that interlacing can add 25-50% to the size of an optimized image. Only use it if you \
 believe the benefits outweigh the costs for your use case.")
                 .short('i')
                 .long("interlace")
-                .value_name("type")
-                .value_parser(["0", "1", "keep"])
-                .default_value("0")
+                .value_name("mode")
+                .value_parser(["off", "on", "keep", "0", "1"])
+                .default_value("off")
                 .default_value_if("no-reductions", ArgPredicate::IsPresent, "keep")
                 .hide_possible_values(true),
         )
