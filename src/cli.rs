@@ -324,7 +324,8 @@ be processed successfully.")
                 .long_help("\
 Use the much slower but stronger Zopfli compressor for main compression trials. \
 Recommended use is with '-o max' and '--fast'.")
-                .short('Z')
+                .short('z')
+                .short_alias('Z') // Kept for backwards compatibility
                 .long("zopfli")
                 .action(ArgAction::SetTrue),
         )
