@@ -2,7 +2,6 @@ use indexmap::IndexSet;
 use rgb::RGBA8;
 
 use crate::{
-    Interlacing,
     colors::{BitDepth, ColorType},
     headers::IhdrData,
     png::{PngImage, scan_lines::ScanLine},
@@ -134,7 +133,7 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 #[must_use]
 pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced != Interlacing::None {
+    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
         return None;
     }
     let palette = match &png.ihdr.color_type {
@@ -156,7 +155,7 @@ pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
 #[must_use]
 pub fn sorted_palette_battiato(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced != Interlacing::None {
+    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
         return None;
     }
     let palette = match &png.ihdr.color_type {

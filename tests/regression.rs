@@ -12,13 +12,11 @@ const GRAYSCALE_ALPHA: u8 = 4;
 const RGBA: u8 = 6;
 
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
-    let mut options = oxipng::Options {
+    let options = oxipng::Options {
         force: true,
+        filters: indexset! {RowFilter::None},
         ..Default::default()
     };
-    let mut filter = IndexSet::new();
-    filter.insert(RowFilter::None);
-    options.filter = filter;
 
     (OutFile::from_path(input.with_extension("out.png")), options)
 }
@@ -78,7 +76,7 @@ fn test_it_converts(
 fn issue_42() {
     let input = "tests/files/issue-42.png";
     let (output, mut opts) = get_opts(Path::new(input));
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
     test_it_converts(
         input,
         Some((output, opts)),
@@ -189,7 +187,7 @@ fn issue_175() {
 fn issue_182() {
     let input = "tests/files/issue-182.png";
     let (output, mut opts) = get_opts(Path::new(input));
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
 
     test_it_converts(
         input,
