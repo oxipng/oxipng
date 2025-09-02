@@ -66,7 +66,7 @@ version = "1.10.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.43"
+version = "4.5.46"
 features = ["wrap_help"]
 
 [target.'cfg(windows)'.dependencies.glob]
@@ -77,7 +77,7 @@ version = "0.3.3"
 optional = true
 default-features = false
 features = ["png"]
-version = "0.25.6"
+version = "0.25.7"
 
 [features]
 binary = ["dep:clap", "dep:glob", "dep:env_logger"]
