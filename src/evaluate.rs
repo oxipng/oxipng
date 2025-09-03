@@ -17,15 +17,20 @@ use rayon::prelude::*;
 
 #[cfg(not(feature = "parallel"))]
 use crate::rayon;
-use crate::{Deadline, PngError, atomicmin::AtomicMin, deflate, filters::RowFilter, png::PngImage};
+use crate::{
+    Deadline, PngError, atomicmin::AtomicMin, deflate, filters::FilterStrategy, png::PngImage,
+};
 
 pub(crate) struct Candidate {
     pub image: Arc<PngImage>,
-    pub data: Vec<u8>,
-    pub data_is_compressed: bool,
+    pub idat_data: Option<Vec<u8>>,
     pub estimated_output_size: usize,
-    pub filter: RowFilter,
-    // For determining tie-breaker
+    /// The input filter, which is retained for printing and for APNG frames.
+    pub filter: FilterStrategy,
+    /// The filter returned by the filter function, which may be Predefined.
+    /// Use this for the next round to avoid recomputing the filter.
+    pub filter_used: FilterStrategy,
+    /// For determining tie-breaker
     nth: usize,
 }
 
@@ -34,7 +39,7 @@ impl Candidate {
         (
             self.estimated_output_size,
             self.image.data.len(),
-            self.filter,
+            self.filter.clone(),
             // Prefer the later image added (e.g. baseline, which is always added last)
             usize::MAX - self.nth,
         )
@@ -44,7 +49,7 @@ impl Candidate {
 /// Collect image versions and pick one that compresses best
 pub(crate) struct Evaluator {
     deadline: Arc<Deadline>,
-    filters: IndexSet<RowFilter>,
+    filters: IndexSet<FilterStrategy>,
     deflater: Deflaters,
     optimize_alpha: bool,
     final_round: bool,
@@ -62,7 +67,7 @@ pub(crate) struct Evaluator {
 impl Evaluator {
     pub fn new(
         deadline: Arc<Deadline>,
-        filters: IndexSet<RowFilter>,
+        filters: IndexSet<FilterStrategy>,
         deflater: Deflaters,
         optimize_alpha: bool,
         final_round: bool,
@@ -141,21 +146,21 @@ impl Evaluator {
             // which are dangerous to do in side Rayon's loop.
             // Instead, only update (atomic) best size in real time,
             // and the best result later without need for locks.
-            filters_iter.for_each(|&filter| {
+            filters_iter.for_each(|filter| {
                 if deadline.passed() {
                     return;
                 }
-                let filtered = image.filter_image(filter, optimize_alpha);
+                let (filtered, filter_used) = image.filter_image(filter.clone(), optimize_alpha);
                 let idat_data = deflater.deflate(&filtered, best_candidate_size.get());
                 if let Ok(idat_data) = idat_data {
                     let estimated_output_size = image.estimated_output_size(&idat_data);
-                    // For the final round we need the IDAT data, otherwise the filtered data
+                    // We only need to retain the IDAT data in the final round
                     let new = Candidate {
                         image: image.clone(),
-                        data: if final_round { idat_data } else { filtered },
-                        data_is_compressed: final_round,
+                        idat_data: if final_round { Some(idat_data) } else { None },
                         estimated_output_size,
-                        filter,
+                        filter: filter.clone(),
+                        filter_used,
                         nth,
                     };
                     best_candidate_size.set_min(estimated_output_size);
