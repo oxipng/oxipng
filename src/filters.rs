@@ -41,22 +41,6 @@ impl Display for FilterStrategy {
     }
 }
 
-impl TryFrom<u8> for FilterStrategy {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0..=4 => Ok(Self::Basic(value.try_into()?)),
-            5 => Ok(Self::MinSum),
-            6 => Ok(Self::Entropy),
-            7 => Ok(Self::Bigrams),
-            8 => Ok(Self::BigEnt),
-            9 => Ok(Self::Brute),
-            _ => Err(()),
-        }
-    }
-}
-
 /// PNG delta filters
 #[repr(u8)]
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]

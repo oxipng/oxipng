@@ -26,7 +26,7 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
-use oxipng::{Deflaters, InFile, Options, OutFile, PngError, StripChunks};
+use oxipng::{Deflaters, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -198,10 +198,18 @@ fn parse_opts_into_struct(
     };
 
     if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
-        opts.filter.clear();
-        for &f in x {
-            opts.filter.insert(f.try_into().unwrap());
-        }
+        opts.filter = x
+            .iter()
+            .map(|&f| match f {
+                0..=4 => FilterStrategy::Basic(f.try_into().unwrap()),
+                5 => FilterStrategy::MinSum,
+                6 => FilterStrategy::Entropy,
+                7 => FilterStrategy::Bigrams,
+                8 => FilterStrategy::BigEnt,
+                9 => FilterStrategy::Brute,
+                _ => unreachable!(),
+            })
+            .collect();
     }
 
     if let Some(&num) = matches.get_one::<u64>("timeout") {
