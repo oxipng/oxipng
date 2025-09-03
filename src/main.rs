@@ -26,7 +26,7 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
-use oxipng::{Deflaters, InFile, Options, OutFile, PngError, RowFilter, StripChunks};
+use oxipng::{Deflaters, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -36,8 +36,7 @@ fn main() -> ExitCode {
         // Set the value parser for filters which isn't appropriate to do in the build_command function
         .mut_arg("filters", |arg| {
             arg.value_parser(|x: &str| {
-                parse_numeric_range_opts(x, 0, RowFilter::LAST)
-                    .map_err(|_| "Invalid option for filters")
+                parse_numeric_range_opts(x, 0, 9).map_err(|_| "Invalid option for filters")
             })
         })
         .after_help("Run `oxipng --help` to see full details of all options")
@@ -198,11 +197,39 @@ fn parse_opts_into_struct(
         Some(level) => Options::from_preset(level.parse::<u8>().unwrap()),
     };
 
-    if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
-        opts.filter.clear();
-        for &f in x {
-            opts.filter.insert(f.try_into().unwrap());
+    // Get custom brute settings and rebuild the filter set to apply them
+    let mut brute_lines = matches.get_one::<usize>("brute-lines").cloned();
+    let mut brute_level = matches.get_one::<i64>("brute-level").map(|x| *x as u8);
+    let mut new_filters = IndexSet::new();
+    for mut f in opts.filter.drain(..) {
+        if let FilterStrategy::Brute { num_lines, level } = &mut f {
+            *num_lines = brute_lines.unwrap_or(*num_lines);
+            *level = brute_level.unwrap_or(*level);
+            // If custom settings were not given, we still need to retain the default values
+            // from the preset so we can re-apply them if the filters are overridden below
+            brute_lines = Some(*num_lines);
+            brute_level = Some(*level);
         }
+        new_filters.insert(f);
+    }
+    opts.filter = new_filters;
+
+    if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
+        opts.filter = x
+            .iter()
+            .map(|&f| match f {
+                0..=4 => FilterStrategy::Basic(f.try_into().unwrap()),
+                5 => FilterStrategy::MinSum,
+                6 => FilterStrategy::Entropy,
+                7 => FilterStrategy::Bigrams,
+                8 => FilterStrategy::BigEnt,
+                9 => FilterStrategy::Brute {
+                    num_lines: brute_lines.unwrap_or(3),
+                    level: brute_level.unwrap_or(1),
+                },
+                _ => unreachable!(),
+            })
+            .collect();
     }
 
     if let Some(&num) = matches.get_one::<u64>("timeout") {

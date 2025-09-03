@@ -7,7 +7,9 @@ use std::{
 use indexmap::{IndexSet, indexset};
 use log::warn;
 
-use crate::{deflate::Deflaters, filters::RowFilter, headers::StripChunks, interlace::Interlacing};
+use crate::{
+    deflate::Deflaters, filters::FilterStrategy, headers::StripChunks, interlace::Interlacing,
+};
 
 /// Write destination for [`optimize`][crate::optimize].
 /// You can use [`optimize_from_memory`](crate::optimize_from_memory) to avoid external I/O.
@@ -94,10 +96,10 @@ pub struct Options {
     ///
     /// Default: `false`
     pub force: bool,
-    /// Which `RowFilters` to try on the file
+    /// Which `FilterStrategy` to try on the file
     ///
     /// Default: `None,Sub,Entropy,Bigrams`
-    pub filter: IndexSet<RowFilter>,
+    pub filter: IndexSet<FilterStrategy>,
     /// Whether to change the interlacing type of the file.
     ///
     /// These are the interlacing types avaliable:
@@ -207,27 +209,49 @@ impl Options {
     fn apply_preset_3(mut self) -> Self {
         self.fast_evaluation = false;
         self.filter = indexset! {
-            RowFilter::None,
-            RowFilter::Bigrams,
-            RowFilter::BigEnt,
-            RowFilter::Brute
+            FilterStrategy::NONE,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 3,
+                level: 1,
+            },
         };
         self
     }
 
     fn apply_preset_4(mut self) -> Self {
+        self.fast_evaluation = false;
+        self.filter = indexset! {
+            FilterStrategy::NONE,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 4,
+                level: 1,
+            },
+        };
         if let Deflaters::Libdeflater { compression } = &mut self.deflate {
             *compression = 12;
         }
-        self.apply_preset_3()
+        self
     }
 
     fn apply_preset_5(mut self) -> Self {
         self.fast_evaluation = false;
-        self.filter.insert(RowFilter::Up);
-        self.filter.insert(RowFilter::MinSum);
-        self.filter.insert(RowFilter::BigEnt);
-        self.filter.insert(RowFilter::Brute);
+        self.filter = indexset! {
+            FilterStrategy::NONE,
+            FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::MinSum,
+            FilterStrategy::Entropy,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 4,
+                level: 4,
+            },
+        };
         if let Deflaters::Libdeflater { compression } = &mut self.deflate {
             *compression = 12;
         }
@@ -235,9 +259,26 @@ impl Options {
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.filter.insert(RowFilter::Average);
-        self.filter.insert(RowFilter::Paeth);
-        self.apply_preset_5()
+        self.fast_evaluation = false;
+        self.filter = indexset! {
+            FilterStrategy::NONE,
+            FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::AVERAGE,
+            FilterStrategy::PAETH,
+            FilterStrategy::MinSum,
+            FilterStrategy::Entropy,
+            FilterStrategy::Bigrams,
+            FilterStrategy::BigEnt,
+            FilterStrategy::Brute {
+                num_lines: 8,
+                level: 5,
+            },
+        };
+        if let Deflaters::Libdeflater { compression } = &mut self.deflate {
+            *compression = 12;
+        }
+        self
     }
 }
 
@@ -247,7 +288,12 @@ impl Default for Options {
         Self {
             fix_errors: false,
             force: false,
-            filter: indexset! {RowFilter::None, RowFilter::Sub, RowFilter::Entropy, RowFilter::Bigrams},
+            filter: indexset! {
+                FilterStrategy::NONE,
+                FilterStrategy::SUB,
+                FilterStrategy::Entropy,
+                FilterStrategy::Bigrams
+            },
             interlace: Some(Interlacing::None),
             optimize_alpha: false,
             bit_depth_reduction: true,
