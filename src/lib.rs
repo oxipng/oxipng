@@ -45,7 +45,7 @@ pub use crate::{
     colors::{BitDepth, ColorType},
     deflate::Deflaters,
     error::PngError,
-    filters::RowFilter,
+    filters::{FilterStrategy, RowFilter},
     headers::StripChunks,
     interlace::Interlacing,
     options::{InFile, Options, OutFile},
@@ -170,7 +170,7 @@ impl RawImage {
 
         let mut png = PngData {
             raw: result.image,
-            idat_data: result.data,
+            idat_data: result.idat_data.unwrap(),
             aux_chunks,
             frames: Vec::new(),
         };
@@ -359,7 +359,7 @@ fn optimize_png(
     };
     if let Some(result) = optimize_raw(raw.clone(), &opts, deadline.clone(), max_size) {
         png.raw = result.image;
-        png.idat_data = result.data;
+        png.idat_data = result.idat_data.unwrap();
         recompress_frames(png, &opts, deadline, result.filter)?;
         postprocess_chunks(&mut png.aux_chunks, &png.raw.ihdr, &raw.ihdr);
     }
@@ -432,7 +432,7 @@ fn optimize_raw(
         opts.filter.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
-        indexset! {RowFilter::None, RowFilter::Bigrams}
+        indexset! {FilterStrategy::NONE, FilterStrategy::Bigrams}
     };
     // This will collect all versions of images and pick one that compresses best
     let eval = Evaluator::new(
@@ -472,7 +472,7 @@ fn optimize_raw(
         (eval_result?, eval_deflater)
     };
 
-    if result.data_is_compressed
+    if result.idat_data.is_some()
         && max_size.is_none_or(|max_size| result.estimated_output_size < max_size)
     {
         debug!("Found better result:");
@@ -489,7 +489,7 @@ fn perform_trials(
     deadline: Arc<Deadline>,
     max_size: Option<usize>,
     mut eval_result: Option<Candidate>,
-    eval_filters: IndexSet<RowFilter>,
+    eval_filters: IndexSet<FilterStrategy>,
     eval_deflater: Deflaters,
 ) -> Option<Candidate> {
     let mut filters = opts.filter.clone();
@@ -499,7 +499,7 @@ fn perform_trials(
 
         if eval_result.is_some() {
             // Some filters have already been evaluated, we don't need to try them again
-            filters = filters.difference(&eval_filters).copied().collect();
+            filters = filters.difference(&eval_filters).cloned().collect();
         }
 
         if !filters.is_empty() {
@@ -523,14 +523,14 @@ fn perform_trials(
         // We should have a result here - fail if not (e.g. deadline passed)
         let mut result = eval_result?;
 
-        if !result.data_is_compressed {
+        if result.idat_data.is_none() {
             // Compress with the main deflater
             debug!("Trying filter {} with {}", result.filter, opts.deflate);
-            match opts.deflate.deflate(&result.data, max_size) {
+            let (data, _) = image.filter_image(result.filter_used.clone(), opts.optimize_alpha);
+            match opts.deflate.deflate(&data, max_size) {
                 Ok(idat_data) => {
                     result.estimated_output_size = result.image.estimated_output_size(&idat_data);
-                    result.data = idat_data;
-                    result.data_is_compressed = true;
+                    result.idat_data = Some(idat_data);
                     trace!("{} bytes", result.estimated_output_size);
                 }
                 Err(PngError::DeflatedDataTooLong(bytes)) => {
@@ -548,10 +548,10 @@ fn perform_trials(
         // Pick a filter automatically
         if image.ihdr.bit_depth as u8 >= 8 {
             // Bigrams is the best all-rounder when there's at least one byte per pixel
-            filters.insert(RowFilter::Bigrams);
+            filters.insert(FilterStrategy::Bigrams);
         } else {
             // Otherwise delta filters generally don't work well, so just stick with None
-            filters.insert(RowFilter::None);
+            filters.insert(FilterStrategy::NONE);
         }
     }
 
@@ -627,11 +627,13 @@ fn recompress_frames(
     png: &mut PngData,
     opts: &Options,
     deadline: Arc<Deadline>,
-    filter: RowFilter,
+    filter: FilterStrategy,
 ) -> PngResult<()> {
     if !opts.idat_recoding || png.frames.is_empty() {
         return Ok(());
     }
+    // Ensure we don't try to recompress frames with a predefined filter
+    debug_assert!(!matches!(filter, FilterStrategy::Predefined { .. }));
     png.frames
         .par_iter_mut()
         .with_max_len(1)
@@ -644,7 +646,7 @@ fn recompress_frames(
             ihdr.width = frame.width;
             ihdr.height = frame.height;
             let image = PngImage::new(ihdr, &frame.data)?;
-            let filtered = image.filter_image(filter, opts.optimize_alpha);
+            let (filtered, _) = image.filter_image(filter.clone(), opts.optimize_alpha);
             let max_size = Some(frame.data.len() - 1);
             if let Ok(data) = opts.deflate.deflate(&filtered, max_size) {
                 debug!(

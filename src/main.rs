@@ -26,7 +26,7 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
-use oxipng::{Deflaters, InFile, Options, OutFile, PngError, RowFilter, StripChunks};
+use oxipng::{Deflaters, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -36,8 +36,7 @@ fn main() -> ExitCode {
         // Set the value parser for filters which isn't appropriate to do in the build_command function
         .mut_arg("filters", |arg| {
             arg.value_parser(|x: &str| {
-                parse_numeric_range_opts(x, 0, RowFilter::LAST)
-                    .map_err(|_| "Invalid option for filters")
+                parse_numeric_range_opts(x, 0, 9).map_err(|_| "Invalid option for filters")
             })
         })
         .after_help("Run `oxipng --help` to see full details of all options")
@@ -199,10 +198,18 @@ fn parse_opts_into_struct(
     };
 
     if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
-        opts.filter.clear();
-        for &f in x {
-            opts.filter.insert(f.try_into().unwrap());
-        }
+        opts.filter = x
+            .iter()
+            .map(|&f| match f {
+                0..=4 => FilterStrategy::Basic(f.try_into().unwrap()),
+                5 => FilterStrategy::MinSum,
+                6 => FilterStrategy::Entropy,
+                7 => FilterStrategy::Bigrams,
+                8 => FilterStrategy::BigEnt,
+                9 => FilterStrategy::Brute,
+                _ => unreachable!(),
+            })
+            .collect();
     }
 
     if let Some(&num) = matches.get_one::<u64>("timeout") {
