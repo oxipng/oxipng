@@ -40,9 +40,9 @@ required-features = ["zopfli"]
 [dependencies]
 zopfli = { version = "0.8.2", optional = true, default-features = false, features = ["std", "zlib"] }
 rgb = "0.8.52"
-indexmap = "2.10.0"
+indexmap = "2.11.4"
 libdeflater = "1.24.0"
-log = "0.4.27"
+log = "0.4.28"
 bitvec = "1.0.1"
 rustc-hash = "2.1.1"
 
@@ -58,15 +58,15 @@ version = "0.5.15"
 
 [dependencies.filetime]
 optional = true
-version = "0.2.25"
+version = "0.2.26"
 
 [dependencies.rayon]
 optional = true
-version = "1.10.0"
+version = "1.11.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.43"
+version = "4.5.48"
 features = ["wrap_help"]
 
 [target.'cfg(windows)'.dependencies.glob]
@@ -77,7 +77,7 @@ version = "0.3.3"
 optional = true
 default-features = false
 features = ["png"]
-version = "0.25.6"
+version = "0.25.8"
 
 [features]
 binary = ["dep:clap", "dep:glob", "dep:env_logger"]
