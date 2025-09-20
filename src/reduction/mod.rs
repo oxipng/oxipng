@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{ColorType, Deadline, Deflaters, Options, evaluate::Evaluator, png::PngImage};
+use crate::{ColorType, Deadline, Deflater, Options, evaluate::Evaluator, png::PngImage};
 
 pub mod alpha;
 use crate::alpha::*;
@@ -21,8 +21,8 @@ pub(crate) fn perform_reductions(
 
     // At low compression levels, skip some transformations which are less likely to be effective
     // This currently affects optimization presets 0-2
-    let cheap = match opts.deflate {
-        Deflaters::Libdeflater { compression } => compression < 12 && opts.fast_evaluation,
+    let cheap = match opts.deflater {
+        Deflater::Libdeflater { compression } => compression < 12 && opts.fast_evaluation,
         _ => false,
     };
 

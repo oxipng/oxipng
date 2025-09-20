@@ -76,7 +76,7 @@ All options are case-sensitive.
 \* Note that oxipng is not a brute-force optimizer. This means that while higher optimization levels
 are almost always better or equal to lower levels, this is not guaranteed and it is possible in
 rare circumstances that a lower level may give a marginally smaller output. Similarly, using Zopfli
-compression (`-Z`) is not guaranteed to always be better than without.
+compression (`-z`) is not guaranteed to always be better than without.
 
 ## Git integration via [pre-commit]
 

@@ -1,9 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read, Write},
-    path::Path,
-    sync::Arc,
-};
+use std::{fs, io::Write, path::Path, sync::Arc};
 
 use bitvec::bitarr;
 use libdeflater::{CompressionLvl, Compressor};
@@ -19,7 +14,7 @@ use crate::{
     error::PngError,
     filters::*,
     headers::*,
-    interlace::{Interlacing, deinterlace_image, interlace_image},
+    interlace::{deinterlace_image, interlace_image},
 };
 
 pub(crate) mod scan_lines;
@@ -62,28 +57,7 @@ impl PngData {
     }
 
     pub fn read_file(filepath: &Path) -> Result<Vec<u8>, PngError> {
-        let file = match File::open(filepath) {
-            Ok(f) => f,
-            Err(_) => return Err(PngError::new("Failed to open file for reading")),
-        };
-        let file_len = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
-        let mut reader = BufReader::new(file);
-        // Check file for PNG header
-        let mut header = [0; 8];
-        if reader.read_exact(&mut header).is_err() {
-            return Err(PngError::new("Not a PNG file: too small"));
-        }
-        if !file_header_is_valid(&header) {
-            return Err(PngError::new("Invalid PNG header detected"));
-        }
-        // Read raw png data into memory
-        let mut byte_data: Vec<u8> = Vec::with_capacity(file_len);
-        byte_data.extend_from_slice(&header);
-        match reader.read_to_end(&mut byte_data) {
-            Ok(_) => (),
-            Err(_) => return Err(PngError::new("Failed to read from file")),
-        }
-        Ok(byte_data)
+        fs::read(filepath).map_err(|e| PngError::ReadFailed(filepath.display().to_string(), e))
     }
 
     /// Create a new `PngData` struct by reading a slice
@@ -293,18 +267,17 @@ impl PngImage {
         Ok(image)
     }
 
-    /// Convert the image to the specified interlacing type
-    /// Returns true if the interlacing was changed, false otherwise
-    /// The `interlace` parameter specifies the *new* interlacing mode
+    /// Enable or disable interlacing
+    /// Returns the new image if the interlacing was changed, None otherwise
     /// Assumes that the data has already been de-filtered
     #[inline]
     #[must_use]
-    pub fn change_interlacing(&self, interlace: Interlacing) -> Option<Self> {
+    pub fn change_interlacing(&self, interlace: bool) -> Option<Self> {
         if interlace == self.ihdr.interlaced {
             return None;
         }
 
-        Some(if interlace == Interlacing::Adam7 {
+        Some(if interlace {
             // Convert progressive to interlaced data
             interlace_image(self)
         } else {

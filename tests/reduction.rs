@@ -15,7 +15,7 @@ fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
     let options = oxipng::Options {
         force: true,
         fast_evaluation: false,
-        filter: indexset! {FilterStrategy::NONE},
+        filters: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
     (OutFile::from_path(input.with_extension("out.png")), options)
@@ -36,7 +36,7 @@ fn test_it_converts(
 
     assert_eq!(png.raw.ihdr.color_type.png_header_code(), color_type_in);
     assert_eq!(png.raw.ihdr.bit_depth, bit_depth_in, "test file is broken");
-    assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+    assert!(!png.raw.ihdr.interlaced);
 
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),

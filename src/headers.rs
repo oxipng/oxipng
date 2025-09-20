@@ -3,12 +3,11 @@ use log::{debug, trace, warn};
 use rgb::{RGB16, RGBA8};
 
 use crate::{
-    Deflaters, Options, PngResult,
+    Deflater, Options, PngResult,
     colors::{BitDepth, ColorType},
     deflate::{crc32, inflate},
     display_chunks::DISPLAY_CHUNKS,
     error::PngError,
-    interlace::Interlacing,
 };
 
 #[derive(Debug, Clone)]
@@ -22,8 +21,8 @@ pub struct IhdrData {
     pub color_type: ColorType,
     /// The bit depth of the image
     pub bit_depth: BitDepth,
-    /// The interlacing mode of the image
-    pub interlaced: Interlacing,
+    /// Whether the image is interlaced
+    pub interlaced: bool,
 }
 
 impl IhdrData {
@@ -45,7 +44,7 @@ impl IhdrData {
             (w * bpp).div_ceil(8) * h
         }
 
-        if self.interlaced == Interlacing::None {
+        if !self.interlaced {
             bitmap_size(bpp, w, h) + h
         } else {
             let mut size = bitmap_size(bpp, (w + 7) >> 3, (h + 7) >> 3) + ((h + 7) >> 3);
@@ -173,10 +172,7 @@ pub fn parse_next_chunk<'a>(
 
     let chunk_bytes = &byte_data[chunk_start..chunk_start + 4 + length as usize];
     if !fix_errors && crc32(chunk_bytes) != crc {
-        return Err(PngError::new(&format!(
-            "CRC Mismatch in {} chunk; May be recoverable by using --fix",
-            String::from_utf8_lossy(chunk_name)
-        )));
+        return Err(PngError::CRCMismatch(chunk_name.try_into().unwrap()));
     }
 
     let name: [u8; 4] = chunk_name.try_into().unwrap();
@@ -209,12 +205,16 @@ pub fn parse_ihdr_chunk(
             },
             4 => ColorType::GrayscaleAlpha,
             6 => ColorType::RGBA,
-            _ => return Err(PngError::new("Unexpected color type in header")),
+            _ => return Err(PngError::InvalidData),
         },
         bit_depth: byte_data[8].try_into()?,
         width: read_be_u32(&byte_data[0..4]),
         height: read_be_u32(&byte_data[4..8]),
-        interlaced: interlaced.try_into()?,
+        interlaced: match interlaced {
+            0 => false,
+            1 => true,
+            _ => return Err(PngError::InvalidData),
+        },
     })
 }
 
@@ -223,7 +223,7 @@ fn palette_to_rgba(
     palette_data: Option<Vec<u8>>,
     trns_data: Option<Vec<u8>>,
 ) -> Result<Vec<RGBA8>, PngError> {
-    let palette_data = palette_data.ok_or_else(|| PngError::new("no palette in indexed image"))?;
+    let palette_data = palette_data.ok_or(PngError::ChunkMissing("PLTE"))?;
     let mut palette: Vec<_> = palette_data
         .chunks_exact(3)
         .map(|color| RGBA8::new(color[0], color[1], color[2], 255))
@@ -276,7 +276,7 @@ pub fn extract_icc(iccp: &Chunk) -> Option<Vec<u8>> {
 }
 
 /// Make an iCCP chunk by compressing the ICC profile
-pub fn make_iccp(icc: &[u8], deflater: Deflaters, max_size: Option<usize>) -> PngResult<Chunk> {
+pub fn make_iccp(icc: &[u8], deflater: Deflater, max_size: Option<usize>) -> PngResult<Chunk> {
     let mut compressed = deflater.deflate(icc, max_size)?;
     let mut data = Vec::with_capacity(compressed.len() + 5);
     data.extend(b"icc"); // Profile name - generally unused, can be anything
@@ -348,7 +348,7 @@ pub fn preprocess_chunks(aux_chunks: &mut Vec<Chunk>, opts: &mut Options) {
             } else if opts.idat_recoding {
                 // Try recompressing the profile
                 let cur_len = aux_chunks[iccp_idx].data.len();
-                if let Ok(iccp) = make_iccp(&icc, opts.deflate, Some(cur_len - 1)) {
+                if let Ok(iccp) = make_iccp(&icc, opts.deflater, Some(cur_len - 1)) {
                     debug!(
                         "Recompressed iCCP chunk: {} ({} bytes decrease)",
                         iccp.data.len(),

@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::{num::NonZeroU64, path::PathBuf};
 
-use clap::{Arg, ArgAction, Command, value_parser};
+use clap::{Arg, ArgAction, Command, builder::ArgPredicate, value_parser};
 
 include!("display_chunks.rs");
 
@@ -97,10 +97,10 @@ Note that this will not preserve the directory structure of the input files when
                 .action(ArgAction::SetTrue),
         )
         .arg(
-            Arg::new("pretend")
+            Arg::new("dry-run")
                 .help("Do not write any files, only show compression results")
-                .short('P')
-                .long("pretend")
+                .short('d')
+                .long("dry-run")
                 .action(ArgAction::SetTrue),
         )
         .arg(
@@ -163,24 +163,23 @@ transformation and may be unsuitable for some applications.")
                 .action(ArgAction::SetTrue),
         )
         .arg(
-            // Note: The default value is not explicitly set here, as it is dependant on the `--nx` flag.
             Arg::new("interlace")
-                .help("Set PNG interlacing type (0, 1, keep) [default: 0]")
+                .help("Set PNG interlacing (off, on, keep)")
                 .long_help("\
-Set the PNG interlacing type, where <type> is one of:
+Set the PNG interlacing mode, where <mode> is one of:
 
-    0     =>  Remove interlacing from all images that are processed
-    1     =>  Apply Adam7 interlacing on all images that are processed
-    keep  =>  Keep the existing interlacing type of each image
+    off   =>  Remove interlacing from all images that are processed
+    on    =>  Apply Adam7 interlacing on all images that are processed
+    keep  =>  Keep the existing interlacing mode of each image
 
 Note that interlacing can add 25-50% to the size of an optimized image. Only use it if you \
-believe the benefits outweigh the costs for your use case.
-
-[default: 0]")
+believe the benefits outweigh the costs for your use case.")
                 .short('i')
                 .long("interlace")
-                .value_name("type")
-                .value_parser(["0", "1", "keep"])
+                .value_name("mode")
+                .value_parser(["off", "on", "keep", "0", "1"])
+                .default_value("off")
+                .default_value_if("no-reductions", ArgPredicate::IsPresent, "keep")
                 .hide_possible_values(true),
         )
         .arg(
@@ -325,7 +324,8 @@ be processed successfully.")
                 .long_help("\
 Use the much slower but stronger Zopfli compressor for main compression trials. \
 Recommended use is with '-o max' and '--fast'.")
-                .short('Z')
+                .short('z')
+                .short_alias('Z') // Kept for backwards compatibility
                 .long("zopfli")
                 .action(ArgAction::SetTrue),
         )
@@ -338,7 +338,18 @@ speed up compression for large files. This option requires '--zopfli' to be set.
                 .long("zi")
                 .value_name("iterations")
                 .default_value("15")
-                .value_parser(1..=255)
+                .value_parser(value_parser!(NonZeroU64))
+                .requires("zopfli"),
+        )
+        .arg(
+            Arg::new("iterations-without-improvement")
+                .hide_short_help(true)
+                .long_help("\
+Stop Zopfli compression after this number of iterations without improvement. Use this in \
+conjunction with a high value for '--zi' to achieve better compression in reasonable time.")
+                .long("ziwi")
+                .value_name("iterations")
+                .value_parser(value_parser!(NonZeroU64))
                 .requires("zopfli"),
         )
         .arg(

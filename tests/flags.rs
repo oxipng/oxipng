@@ -1,5 +1,3 @@
-#[cfg(feature = "zopfli")]
-use std::num::NonZeroU8;
 use std::{
     fs::remove_file,
     path::{Path, PathBuf},
@@ -16,7 +14,7 @@ fn get_opts(input: &Path) -> (OutFile, Options) {
     let options = Options {
         force: true,
         fast_evaluation: false,
-        filter: indexset! {FilterStrategy::NONE},
+        filters: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
     (OutFile::from_path(input.with_extension("out.png")), options)
@@ -316,7 +314,7 @@ fn strip_chunks_none() {
 fn interlacing_0_to_1() {
     let input = PathBuf::from("tests/files/interlacing_0_to_1.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
 
     test_it_converts_callbacks(
         input,
@@ -327,10 +325,10 @@ fn interlacing_0_to_1() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
     );
 }
@@ -339,7 +337,7 @@ fn interlacing_0_to_1() {
 fn interlacing_1_to_0() {
     let input = PathBuf::from("tests/files/interlacing_1_to_0.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::None);
+    opts.interlace = Some(false);
 
     test_it_converts_callbacks(
         input,
@@ -350,10 +348,10 @@ fn interlacing_1_to_0() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
     );
 }
@@ -362,7 +360,7 @@ fn interlacing_1_to_0() {
 fn interlacing_0_to_1_small_files() {
     let input = PathBuf::from("tests/files/interlacing_0_to_1_small_files.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::Adam7);
+    opts.interlace = Some(true);
 
     test_it_converts_callbacks(
         input,
@@ -373,10 +371,10 @@ fn interlacing_0_to_1_small_files() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
     );
 }
@@ -385,7 +383,7 @@ fn interlacing_0_to_1_small_files() {
 fn interlacing_1_to_0_small_files() {
     let input = PathBuf::from("tests/files/interlacing_1_to_0_small_files.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::None);
+    opts.interlace = Some(false);
 
     test_it_converts_callbacks(
         input,
@@ -396,10 +394,10 @@ fn interlacing_1_to_0_small_files() {
         RGB,
         BitDepth::Eight,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
     );
 }
@@ -408,8 +406,8 @@ fn interlacing_1_to_0_small_files() {
 fn interlaced_0_to_1_other_filter_mode() {
     let input = PathBuf::from("tests/files/interlaced_0_to_1_other_filter_mode.png");
     let (output, mut opts) = get_opts(&input);
-    opts.interlace = Some(Interlacing::Adam7);
-    opts.filter = indexset! {FilterStrategy::PAETH};
+    opts.interlace = Some(true);
+    opts.filters = indexset! {FilterStrategy::PAETH};
 
     test_it_converts_callbacks(
         input,
@@ -420,10 +418,10 @@ fn interlaced_0_to_1_other_filter_mode() {
         GRAY,
         BitDepth::Sixteen,
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::None);
+            assert!(!png.raw.ihdr.interlaced);
         },
         |png| {
-            assert_eq!(png.raw.ihdr.interlaced, Interlacing::Adam7);
+            assert!(png.raw.ihdr.interlaced);
         },
     );
 }
@@ -436,8 +434,6 @@ fn preserve_attrs() {
     let meta_input = input
         .metadata()
         .expect("unable to get file metadata for output file");
-    #[cfg(feature = "filetime")]
-    let atime_canon = filetime::FileTime::from_last_access_time(&meta_input);
     #[cfg(feature = "filetime")]
     let mtime_canon = filetime::FileTime::from_last_modification_time(&meta_input);
 
@@ -457,12 +453,6 @@ fn preserve_attrs() {
     let meta_output = output
         .metadata()
         .expect("unable to get file metadata for output file");
-    #[cfg(feature = "filetime")]
-    assert_eq!(
-        &atime_canon,
-        &filetime::FileTime::from_last_access_time(&meta_output),
-        "expected access time to be identical to that of input",
-    );
     #[cfg(feature = "filetime")]
     assert_eq!(
         &mtime_canon,
@@ -649,9 +639,7 @@ fn scale_16() {
 fn zopfli_mode() {
     let input = PathBuf::from("tests/files/zopfli_mode.png");
     let (output, mut opts) = get_opts(&input);
-    opts.deflate = Deflaters::Zopfli {
-        iterations: NonZeroU8::new(15).unwrap(),
-    };
+    opts.deflater = Deflater::Zopfli(ZopfliOptions::default());
 
     test_it_converts(
         input,

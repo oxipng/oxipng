@@ -17,7 +17,7 @@
 mod rayon;
 
 #[cfg(feature = "zopfli")]
-use std::num::NonZeroU8;
+use std::num::NonZeroU64;
 use std::{
     ffi::OsString, fs::DirBuilder, io::Write, path::PathBuf, process::ExitCode, time::Duration,
 };
@@ -26,7 +26,9 @@ use clap::ArgMatches;
 mod cli;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
-use oxipng::{Deflaters, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
+#[cfg(feature = "zopfli")]
+use oxipng::ZopfliOptions;
+use oxipng::{Deflater, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -198,7 +200,7 @@ fn parse_opts_into_struct(
     };
 
     if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
-        opts.filter = x
+        opts.filters = x
             .iter()
             .map(|&f| match f {
                 0..=4 => FilterStrategy::Basic(f.try_into().unwrap()),
@@ -233,7 +235,7 @@ fn parse_opts_into_struct(
         None
     };
 
-    let out_file = if matches.get_flag("pretend") {
+    let out_file = if matches.get_flag("dry-run") {
         OutFile::None
     } else if matches.get_flag("stdout") {
         OutFile::StdOut
@@ -276,10 +278,10 @@ fn parse_opts_into_struct(
     opts.idat_recoding = !matches.get_flag("no-recoding");
 
     if let Some(x) = matches.get_one::<String>("interlace") {
-        opts.interlace = if x == "keep" {
-            None
-        } else {
-            x.parse::<u8>().unwrap().try_into().ok()
+        opts.interlace = match x.as_str() {
+            "off" | "0" => Some(false),
+            "on" | "1" => Some(true),
+            _ => None, // keep
         };
     }
 
@@ -335,13 +337,18 @@ fn parse_opts_into_struct(
 
     #[cfg(feature = "zopfli")]
     if matches.get_flag("zopfli") {
-        let iterations = *matches.get_one::<i64>("iterations").unwrap();
-        opts.deflate = Deflaters::Zopfli {
-            iterations: NonZeroU8::new(iterations as u8).unwrap(),
-        };
+        let iteration_count = *matches.get_one::<NonZeroU64>("iterations").unwrap();
+        let iterations_without_improvement = *matches
+            .get_one::<NonZeroU64>("iterations-without-improvement")
+            .unwrap_or(&NonZeroU64::MAX);
+        opts.deflater = Deflater::Zopfli(ZopfliOptions {
+            iteration_count,
+            iterations_without_improvement,
+            ..Default::default()
+        });
     }
-    if let (Deflaters::Libdeflater { compression }, Some(x)) =
-        (&mut opts.deflate, matches.get_one::<i64>("compression"))
+    if let (Deflater::Libdeflater { compression }, Some(x)) =
+        (&mut opts.deflater, matches.get_one::<i64>("compression"))
     {
         *compression = *x as u8;
     }

@@ -30,7 +30,7 @@ fn test_it_converts(
 
     let (output, mut opts) = get_opts(&input);
     let png = PngData::new(&input, &opts).unwrap();
-    opts.filter = indexset! {filter};
+    opts.filters = indexset! {filter};
     assert_eq!(png.raw.ihdr.color_type.png_header_code(), color_type_in);
     assert_eq!(png.raw.ihdr.bit_depth, bit_depth_in);
 

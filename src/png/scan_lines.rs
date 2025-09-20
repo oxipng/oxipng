@@ -1,4 +1,4 @@
-use crate::{interlace::Interlacing, png::PngImage};
+use crate::png::PngImage;
 
 /// An iterator over the scan lines of a PNG image
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ impl ScanLineRanges {
             width: png.ihdr.width,
             height: png.ihdr.height,
             left: png.data.len(),
-            pass: if png.ihdr.interlaced == Interlacing::Adam7 {
+            pass: if png.ihdr.interlaced {
                 Some((1, 0))
             } else {
                 None

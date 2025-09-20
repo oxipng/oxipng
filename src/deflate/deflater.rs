@@ -22,7 +22,7 @@ pub fn inflate(data: &[u8], out_size: usize) -> PngResult<Vec<u8>> {
         .zlib_decompress(data, &mut dest)
         .map_err(|err| match err {
             DecompressionError::BadData => PngError::InvalidData,
-            DecompressionError::InsufficientSpace => PngError::new("inflated data too long"),
+            DecompressionError::InsufficientSpace => PngError::InflatedDataTooLong(out_size),
         })?;
     dest.truncate(len);
     Ok(dest)
