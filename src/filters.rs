@@ -163,11 +163,28 @@ impl RowFilter {
                         .unwrap_or(i),
                     _ => i - 1,
                 };
+
+                // These assertions help eliminate a few bounds checks in the slice accesses below
+                assert!(prev < pixels.len());
+                assert!(i < prev_pixels.len());
+
                 match self {
                     Self::None => unreachable!(),
                     Self::Sub => {
-                        for j in 0..color_bytes {
-                            pixels[i][j] = pixels[prev][j];
+                        // The code below is roughly equivalent to pixels[i][0..color_bytes].copy_from_slice(&pixels[prev][0..color_bytes]),
+                        // if such a thing was possible to do without violating Rust aliasing rules. See:
+                        // https://users.rust-lang.org/t/problem-borrowing-two-elements-of-vec-mutably/21446/2
+
+                        if prev < i {
+                            let (pixels_head, pixels_tail) = pixels.split_at_mut(prev + 1);
+                            pixels_tail[i - prev - 1][0..color_bytes]
+                                .copy_from_slice(&pixels_head[prev][0..color_bytes]);
+                        } else if prev > i {
+                            let (pixels_head, pixels_tail) = pixels.split_at_mut(i + 1);
+                            pixels_head[i][0..color_bytes]
+                                .copy_from_slice(&pixels_tail[prev - i - 1][0..color_bytes]);
+                        } else {
+                            // If prev == i, we'd be copying the pixels onto themselves, which is useless
                         }
                     }
                     Self::Up => {
