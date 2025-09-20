@@ -513,14 +513,14 @@ impl PngImage {
                         let mut compressor =
                             Compressor::new(CompressionLvl::new(level.into()).unwrap());
                         let limit = filtered.len().min((line.data.len() + 1) * num_lines);
-                        let capacity = compressor.zlib_compress_bound(limit);
+                        let capacity = compressor.deflate_compress_bound(limit);
                         let mut dest = vec![0; capacity];
 
                         for f in try_filters {
                             f.filter_line(bpp, &mut line_data, &prev_line, &mut f_buf, alpha_bytes);
                             filtered[line_start..].copy_from_slice(&f_buf);
                             let size = compressor
-                                .zlib_compress(&filtered[filtered.len() - limit..], &mut dest)
+                                .deflate_compress(&filtered[filtered.len() - limit..], &mut dest)
                                 .unwrap_or(usize::MAX);
                             if size < best_size {
                                 best_size = size;
