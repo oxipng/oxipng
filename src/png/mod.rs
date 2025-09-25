@@ -147,6 +147,11 @@ impl PngData {
             key_chunks.remove(b"PLTE"),
             key_chunks.remove(b"tRNS"),
         )?;
+        if let Some(max) = opts.max_decompressed_size {
+            if ihdr.raw_data_size() > max {
+                return Err(PngError::InflatedDataTooLong(max));
+            }
+        }
 
         let raw = PngImage::new(ihdr, &idat_data)?;
 

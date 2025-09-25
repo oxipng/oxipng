@@ -8,3 +8,4 @@ publish = false
 [dependencies]
 clap = "4.5.21"
 clap_mangen = "0.2.24"
+parse-size = "1.1.0"

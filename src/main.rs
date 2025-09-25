@@ -259,6 +259,8 @@ fn parse_opts_into_struct(
 
     opts.fix_errors = matches.get_flag("fix");
 
+    opts.max_decompressed_size = matches.get_one::<u64>("max-size").map(|&x| x as usize);
+
     opts.bit_depth_reduction = !matches.get_flag("no-bit-reduction");
 
     opts.color_type_reduction = !matches.get_flag("no-color-reduction");
@@ -425,6 +427,13 @@ fn parse_numeric_range_opts(
 }
 
 fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> OptimizationResult {
+    if let (Some(max_size), InFile::Path(path)) = (opts.max_decompressed_size, input) {
+        if path.metadata().is_ok_and(|m| m.len() > max_size as u64) {
+            warn!("{input}: Skipped: File exceeds the maximum size ({max_size} bytes)");
+            return OptimizationResult::Skipped;
+        }
+    }
+
     match oxipng::optimize(input, output, opts) {
         // For optimizing single files, this will return the correct exit code always.
         // For recursive optimization, the correct choice is a bit subjective.
@@ -434,8 +443,8 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
         // PNG files, and return an error for them.
         // We don't really want to return an error code for those files.
         Ok(_) => OptimizationResult::Ok,
-        Err(e @ PngError::C2PAMetadataPreventsChanges) => {
-            warn!("{input}: {e}");
+        Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
+            warn!("{input}: Skipped: {e}");
             OptimizationResult::Skipped
         }
         Err(e) => {

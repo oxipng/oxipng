@@ -69,6 +69,10 @@ optional = true
 version = "4.5.48"
 features = ["wrap_help"]
 
+[dependencies.parse-size]
+optional = true
+version = "1.1.0"
+
 [target.'cfg(windows)'.dependencies.glob]
 optional = true
 version = "0.3.3"
@@ -80,7 +84,7 @@ features = ["png"]
 version = "0.25.8"
 
 [features]
-binary = ["dep:clap", "dep:glob", "dep:env_logger"]
+binary = ["dep:clap", "dep:glob", "dep:env_logger", "dep:parse-size"]
 default = ["binary", "parallel", "zopfli", "filetime"]
 parallel = ["dep:rayon", "indexmap/rayon", "dep:crossbeam-channel"]
 freestanding = ["libdeflater/freestanding"]

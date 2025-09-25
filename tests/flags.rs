@@ -635,6 +635,19 @@ fn scale_16() {
 }
 
 #[test]
+fn max_size() {
+    let result = oxipng::optimize(
+        &"tests/files/max_size.png".into(),
+        &OutFile::None,
+        &Options {
+            max_decompressed_size: Some(150_000),
+            ..Options::default()
+        },
+    );
+    assert!(matches!(result, Err(PngError::InflatedDataTooLong(_))));
+}
+
+#[test]
 #[cfg(feature = "zopfli")]
 fn zopfli_mode() {
     let input = PathBuf::from("tests/files/zopfli_mode.png");
