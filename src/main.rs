@@ -199,6 +199,23 @@ fn parse_opts_into_struct(
         Some(level) => Options::from_preset(level.parse::<u8>().unwrap()),
     };
 
+    // Get custom brute settings and rebuild the filter set to apply them
+    let mut brute_lines = matches.get_one::<usize>("brute-lines").cloned();
+    let mut brute_level = matches.get_one::<i64>("brute-level").map(|x| *x as u8);
+    let mut new_filters = IndexSet::new();
+    for mut f in opts.filters.drain(..) {
+        if let FilterStrategy::Brute { num_lines, level } = &mut f {
+            *num_lines = brute_lines.unwrap_or(*num_lines);
+            *level = brute_level.unwrap_or(*level);
+            // If custom settings were not given, we still need to retain the default values
+            // from the preset so we can re-apply them if the filters are overridden below
+            brute_lines = Some(*num_lines);
+            brute_level = Some(*level);
+        }
+        new_filters.insert(f);
+    }
+    opts.filters = new_filters;
+
     if let Some(x) = matches.get_one::<IndexSet<u8>>("filters") {
         opts.filters = x
             .iter()
@@ -208,7 +225,10 @@ fn parse_opts_into_struct(
                 6 => FilterStrategy::Entropy,
                 7 => FilterStrategy::Bigrams,
                 8 => FilterStrategy::BigEnt,
-                9 => FilterStrategy::Brute,
+                9 => FilterStrategy::Brute {
+                    num_lines: brute_lines.unwrap_or(3),
+                    level: brute_level.unwrap_or(1),
+                },
                 _ => unreachable!(),
             })
             .collect();
