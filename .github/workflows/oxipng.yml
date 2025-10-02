@@ -49,9 +49,9 @@ jobs:
           - target: i686-pc-windows-msvc
             os: windows-latest
           - target: x86_64-apple-darwin
-            os: macos-13 # x86_64 runner
+            os: macos-15
           - target: aarch64-apple-darwin
-            os: macos-15 # ARM64 runner
+            os: macos-15
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
