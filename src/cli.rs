@@ -229,9 +229,9 @@ PNG delta filters (apply the same filter to every line)
 
 Heuristic strategies (try to find the best delta filter for each line)
     5  =>  MinSum    Minimum sum of absolute differences
-    6  =>  Entropy   Highest Shannon entropy
+    6  =>  Entropy   Smallest Shannon entropy
     7  =>  Bigrams   Lowest count of distinct bigrams
-    8  =>  BigEnt    Highest Shannon entropy of bigrams
+    8  =>  BigEnt    Smallest Shannon entropy of bigrams
     9  =>  Brute     Smallest compressed size (slow)
 
 The default value depends on the optimization level preset.")
@@ -309,7 +309,7 @@ compressed chunks (such as iCCP) will also be disabled. Note that the combinatio
                 .help("Disable checksum validation")
                 .long_help("\
 Do not perform checksum validation of PNG chunks. This may allow some files with errors to \
-be processed successfully.")
+be processed successfully. The output will always have correct checksums.")
                 .long("fix")
                 .action(ArgAction::SetTrue),
         )
