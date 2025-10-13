@@ -136,7 +136,7 @@ jobs:
             target/${{ env.CARGO_BUILD_TARGET }}/release/oxipng.exe
 
       - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() && matrix.target == 'x86_64-unknown-linux-gnu'
         continue-on-error: true
         with:
