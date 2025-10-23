@@ -40,7 +40,7 @@ required-features = ["zopfli"]
 [dependencies]
 zopfli = { version = "0.8.2", optional = true, default-features = false, features = ["std", "zlib"] }
 rgb = "0.8.52"
-indexmap = "2.11.4"
+indexmap = "2.12.0"
 libdeflater = "1.24.0"
 log = "0.4.28"
 bitvec = "1.0.1"
@@ -66,7 +66,7 @@ version = "1.11.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.48"
+version = "4.5.49"
 features = ["wrap_help"]
 
 [dependencies.parse-size]
