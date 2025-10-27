@@ -128,7 +128,7 @@ jobs:
         run: cargo build --release
 
       - name: Upload CLI binary as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Oxipng binary (${{ matrix.target }})
           path: |
