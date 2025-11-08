@@ -82,7 +82,6 @@ jobs:
         uses: taiki-e/install-action@nextest
 
       - name: Install cargo-hack
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
         uses: taiki-e/install-action@cargo-hack
 
       - name: Install clippy-sarif
