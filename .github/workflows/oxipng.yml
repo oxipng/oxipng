@@ -112,6 +112,11 @@ jobs:
           | tee clippy-results.sarif
           | sarif-fmt
 
+      - name: Run Check for all feature combinations
+        run: cargo hack clippy --no-deps --all-targets --feature-powerset \
+            --exclude-features sanity-checks,system-libdeflate \
+            -- -D warnings
+
       - name: Run tests
         run: |
           cargo nextest run --release --features sanity-checks
