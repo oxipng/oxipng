@@ -112,7 +112,7 @@ jobs:
           | sarif-fmt
 
       - name: Run Check for all feature combinations
-        run: cargo hack clippy --no-deps --all-targets --feature-powerset \
+        run: cargo hack check --no-deps --all-targets --feature-powerset \
             --exclude-features sanity-checks,system-libdeflate \
             -- -D warnings
 
