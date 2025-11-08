@@ -112,9 +112,9 @@ jobs:
           | sarif-fmt
 
       - name: Run Check for all feature combinations
-        run: cargo hack check --all-targets --feature-powerset \
+        run: cargo hack --all-targets --feature-powerset \
             --exclude-features sanity-checks,system-libdeflate \
-            -- -D warnings
+            check -D warnings
 
       - name: Run tests
         run: |
