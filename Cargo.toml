@@ -81,7 +81,7 @@ version = "0.3.3"
 optional = true
 default-features = false
 features = ["png"]
-version = "0.25.8"
+version = "0.25.9"
 
 [features]
 binary = ["dep:clap", "dep:glob", "dep:env_logger", "dep:parse-size"]
