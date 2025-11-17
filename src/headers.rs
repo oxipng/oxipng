@@ -410,4 +410,16 @@ pub fn postprocess_chunks(aux_chunks: &mut Vec<Chunk>, ihdr: &IhdrData, orig_ihd
             !invalid
         });
     }
+
+    // Remove iDOT which will necessarily be invalid after successful optimization
+    aux_chunks.retain(|c| {
+        let invalid = &c.name == b"iDOT";
+        if invalid {
+            trace!(
+                "Removing {} chunk as it no longer matches the IDAT",
+                std::str::from_utf8(&c.name).unwrap()
+            );
+        }
+        !invalid
+    });
 }
