@@ -449,9 +449,9 @@ fn optimize_raw(
 
     let (result, deflater) = if opts.idat_recoding || reduction_occurred {
         let result = perform_trials(
-            new_image.clone(),
+            new_image,
             opts,
-            deadline.clone(),
+            deadline,
             max_size,
             eval_result,
             eval_filters,
@@ -497,7 +497,7 @@ fn perform_trials(
         if !filters.is_empty() {
             trace!("Evaluating {} filters", filters.len());
             let eval = Evaluator::new(
-                deadline.clone(),
+                deadline,
                 filters,
                 eval_deflater,
                 opts.optimize_alpha,
