@@ -133,9 +133,8 @@ impl PngData {
         if idat_data.is_empty() {
             return Err(PngError::ChunkMissing("IDAT"));
         }
-        let ihdr_chunk = match key_chunks.remove(b"IHDR") {
-            Some(ihdr) => ihdr,
-            None => return Err(PngError::ChunkMissing("IHDR")),
+        let Some(ihdr_chunk) = key_chunks.remove(b"IHDR") else {
+            return Err(PngError::ChunkMissing("IHDR"));
         };
         let ihdr = parse_ihdr_chunk(
             &ihdr_chunk,
