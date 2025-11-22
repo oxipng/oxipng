@@ -70,17 +70,17 @@ pub fn reduced_bit_depth_8_or_less(png: &PngImage) -> Option<PngImage> {
         return None;
     }
 
-    let mut minimum_bits = 1;
-
-    if let ColorType::Indexed { palette } = &png.ihdr.color_type {
+    let minimum_bits = if let ColorType::Indexed { palette } = &png.ihdr.color_type {
         // We can easily determine minimum depth by the palette size
-        minimum_bits = match palette.len() {
+        match palette.len() {
             0..=2 => 1,
             3..=4 => 2,
             5..=16 => 4,
             _ => return None,
-        };
+        }
     } else {
+        let mut minimum_bits = 1;
+
         // Finding minimum depth for grayscale is much more complicated
         let mut mask = 1;
         let mut divisions = 1..8;
@@ -110,7 +110,9 @@ pub fn reduced_bit_depth_8_or_less(png: &PngImage) -> Option<PngImage> {
                 break;
             }
         }
-    }
+
+        minimum_bits
+    };
 
     let mut reduced = Vec::with_capacity(png.data.len());
     let mask = (1 << minimum_bits) - 1;
