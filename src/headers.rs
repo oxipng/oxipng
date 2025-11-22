@@ -35,12 +35,12 @@ impl IhdrData {
 
     /// Byte length of IDAT that is correct for this IHDR
     #[must_use]
-    pub fn raw_data_size(&self) -> usize {
+    pub const fn raw_data_size(&self) -> usize {
         let w = self.width as usize;
         let h = self.height as usize;
         let bpp = self.bpp();
 
-        fn bitmap_size(bpp: usize, w: usize, h: usize) -> usize {
+        const fn bitmap_size(bpp: usize, w: usize, h: usize) -> usize {
             (w * bpp).div_ceil(8) * h
         }
 
