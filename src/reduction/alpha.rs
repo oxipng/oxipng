@@ -81,7 +81,7 @@ pub fn reduced_alpha_channel(png: &PngImage, optimize_alpha: bool) -> Option<Png
                 raw_data.resize(raw_data.len() + colored_bytes, trns);
             }
             _ => raw_data.extend_from_slice(&pixel[0..colored_bytes]),
-        };
+        }
     }
 
     // Construct the color type with appropriate transparency data
