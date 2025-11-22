@@ -50,7 +50,7 @@ fn test_it_converts_callbacks<CBPRE, CBPOST>(
     match oxipng::optimize(&InFile::Path(input), output, opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
@@ -445,7 +445,7 @@ fn preserve_attrs() {
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 

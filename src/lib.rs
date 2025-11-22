@@ -529,7 +529,7 @@ fn perform_trials(
                     trace!(">{bytes} bytes");
                 }
                 Err(_) => (),
-            };
+            }
         }
         return Some(result);
     }

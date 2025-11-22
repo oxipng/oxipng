@@ -127,7 +127,7 @@ fn collect_files(
                 warn!("{} is a directory, skipping", input.display());
             }
             continue;
-        };
+        }
         let out_file =
             if let (Some(out_dir), &OutFile::Path { preserve_attrs, .. }) = (out_dir, out_file) {
                 let path = Some(out_dir.join(input.file_name().unwrap()));
@@ -243,7 +243,7 @@ fn parse_opts_into_struct(
             match DirBuilder::new().recursive(true).create(path) {
                 Ok(()) => (),
                 Err(x) => return Err(format!("Could not create output directory {x}")),
-            };
+            }
         } else if !path.is_dir() {
             return Err(format!(
                 "{} is an existing file (not a directory), cannot create directory",

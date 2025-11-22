@@ -7,7 +7,7 @@ pub fn deflate(data: &[u8], options: zopfli::Options) -> PngResult<Vec<u8>> {
     match zopfli::compress(options, zopfli::Format::Zlib, Box::new(data), &mut output) {
         Ok(_) => (),
         Err(_) => return Err(PngError::new("Failed to compress in zopfli")),
-    };
+    }
     output.shrink_to_fit();
     Ok(output)
 }
