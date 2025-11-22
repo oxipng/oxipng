@@ -28,36 +28,34 @@ impl fmt::Display for PngError {
     #[cold]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            PngError::APNGOutOfOrder => f.write_str("APNG chunks are out of order"),
-            PngError::C2PAMetadataPreventsChanges => f.write_str(
+            Self::APNGOutOfOrder => f.write_str("APNG chunks are out of order"),
+            Self::C2PAMetadataPreventsChanges => f.write_str(
                 "The image contains C2PA manifest that would be invalidated by any file changes",
             ),
-            PngError::ChunkMissing(s) => write!(f, "Chunk {s} missing or empty"),
-            PngError::CRCMismatch(ref c) => write!(
+            Self::ChunkMissing(s) => write!(f, "Chunk {s} missing or empty"),
+            Self::CRCMismatch(ref c) => write!(
                 f,
                 "CRC mismatch in {} chunk; May be recoverable by using --fix",
                 String::from_utf8_lossy(c)
             ),
-            PngError::DeflatedDataTooLong(_) => f.write_str("Deflated data too long"),
-            PngError::IncorrectDataLength(l1, l2) => write!(
+            Self::DeflatedDataTooLong(_) => f.write_str("Deflated data too long"),
+            Self::IncorrectDataLength(l1, l2) => write!(
                 f,
                 "Data length {l1} does not match the expected length {l2}"
             ),
-            PngError::InflatedDataTooLong(max) => write!(
+            Self::InflatedDataTooLong(max) => write!(
                 f,
                 "Inflated data would exceed the maximum size ({max} bytes)"
             ),
-            PngError::InvalidData => f.write_str("Invalid data found; unable to read PNG file"),
-            PngError::InvalidDepthForType(d, ref c) => {
+            Self::InvalidData => f.write_str("Invalid data found; unable to read PNG file"),
+            Self::InvalidDepthForType(d, ref c) => {
                 write!(f, "Invalid bit depth {d} for color type {c}")
             }
-            PngError::NotPNG => f.write_str("Invalid header detected; Not a PNG file"),
-            PngError::ReadFailed(ref s, ref e) => write!(f, "Failed to read from {s}: {e}"),
-            PngError::TruncatedData => {
-                f.write_str("Missing data in the file; the file is truncated")
-            }
-            PngError::WriteFailed(ref s, ref e) => write!(f, "Failed to write to {s}: {e}"),
-            PngError::Other(ref s) => f.write_str(s),
+            Self::NotPNG => f.write_str("Invalid header detected; Not a PNG file"),
+            Self::ReadFailed(ref s, ref e) => write!(f, "Failed to read from {s}: {e}"),
+            Self::TruncatedData => f.write_str("Missing data in the file; the file is truncated"),
+            Self::WriteFailed(ref s, ref e) => write!(f, "Failed to write to {s}: {e}"),
+            Self::Other(ref s) => f.write_str(s),
         }
     }
 }
@@ -65,7 +63,7 @@ impl fmt::Display for PngError {
 impl PngError {
     #[cold]
     #[must_use]
-    pub fn new(description: &str) -> PngError {
-        PngError::Other(description.into())
+    pub fn new(description: &str) -> Self {
+        Self::Other(description.into())
     }
 }
