@@ -138,7 +138,7 @@ impl Iterator for ScanLineRanges {
                     pixels_per_line += 1;
                 }
                 _ => (),
-            };
+            }
             let current_pass = Some(pass.0);
             if pass.1 + y_steps >= self.height {
                 pass.0 += 1;

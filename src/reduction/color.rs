@@ -54,10 +54,10 @@ pub fn reduced_to_indexed(png: &PngImage, allow_grayscale: bool) -> Option<PngIm
             let transparency_pixel = transparent_shade.map(|t| Gray::from(t as u8));
             pmap.into_iter()
                 .map(|px| {
-                    RGB::from(px).with_alpha(if Some(px) != transparency_pixel {
-                        255
-                    } else {
+                    RGB::from(px).with_alpha(if Some(px) == transparency_pixel {
                         0
+                    } else {
+                        255
                     })
                 })
                 .collect()
@@ -68,10 +68,10 @@ pub fn reduced_to_indexed(png: &PngImage, allow_grayscale: bool) -> Option<PngIm
             let transparency_pixel = transparent_color.map(|t| t.map(|c| c as u8));
             pmap.into_iter()
                 .map(|px| {
-                    px.with_alpha(if Some(px) != transparency_pixel {
-                        255
-                    } else {
+                    px.with_alpha(if Some(px) == transparency_pixel {
                         0
+                    } else {
+                        255
                     })
                 })
                 .collect()

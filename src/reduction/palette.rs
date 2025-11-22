@@ -206,7 +206,7 @@ fn apply_palette_reorder(png: &PngImage, remapping: &[usize]) -> Option<PngImage
 
 // Find the most popular color on the image edges (the pixels neighboring the filter bytes)
 fn most_popular_edge_color(num_colors: usize, png: &PngImage) -> Option<usize> {
-    let mut counts = [0u32; 256];
+    let mut counts = [0_u32; 256];
     for line in png.scan_lines(false) {
         if let &[first, .., last] = line.data {
             counts[first as usize] += 1;
@@ -229,7 +229,7 @@ fn most_popular_edge_color(num_colors: usize, png: &PngImage) -> Option<usize> {
 
 // Find the most popular color in the image, along with its count
 fn most_popular_color(num_colors: usize, png: &PngImage) -> (usize, u32) {
-    let mut counts = [0u32; 256];
+    let mut counts = [0_u32; 256];
     for &val in &png.data {
         counts[val as usize] += 1;
     }
@@ -261,7 +261,7 @@ fn apply_most_popular_color(png: &PngImage, remapping: &mut [usize]) {
 
 // Calculate co-occurences matrix
 fn co_occurrence_matrix(num_colors: usize, png: &PngImage) -> Vec<Vec<u32>> {
-    let mut matrix = vec![vec![0u32; num_colors]; num_colors];
+    let mut matrix = vec![vec![0_u32; num_colors]; num_colors];
     let mut prev: Option<ScanLine> = None;
     let mut prev_val = None;
     for line in png.scan_lines(false) {

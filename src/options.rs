@@ -32,8 +32,8 @@ impl OutFile {
     ///
     /// This is a convenience method for `OutFile::Path { path: Some(path), preserve_attrs: false }`.
     #[must_use]
-    pub fn from_path(path: PathBuf) -> Self {
-        OutFile::Path {
+    pub const fn from_path(path: PathBuf) -> Self {
+        Self::Path {
             path: Some(path),
             preserve_attrs: false,
         }
@@ -199,7 +199,7 @@ impl Options {
         self
     }
 
-    fn apply_preset_2(self) -> Self {
+    const fn apply_preset_2(self) -> Self {
         self
     }
 
