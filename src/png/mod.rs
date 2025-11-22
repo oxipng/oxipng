@@ -310,11 +310,10 @@ impl PngImage {
         match &self.ihdr.color_type {
             ColorType::Indexed { palette } => {
                 let plte = 12 + palette.len() * 3;
-                if let Some(trns) = palette.iter().rposition(|p| p.a != 255) {
-                    plte + 12 + trns + 1
-                } else {
-                    plte
-                }
+                palette
+                    .iter()
+                    .rposition(|p| p.a != 255)
+                    .map_or(plte, |trns| plte + 12 + trns + 1)
             }
             ColorType::Grayscale { transparent_shade } if transparent_shade.is_some() => 12 + 2,
             ColorType::RGB { transparent_color } if transparent_color.is_some() => 12 + 6,
