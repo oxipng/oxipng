@@ -33,7 +33,7 @@ impl OutFile {
     /// This is a convenience method for `OutFile::Path { path: Some(path), preserve_attrs: false }`.
     #[must_use]
     pub fn from_path(path: PathBuf) -> Self {
-        OutFile::Path {
+        Self::Path {
             path: Some(path),
             preserve_attrs: false,
         }

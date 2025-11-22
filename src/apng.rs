@@ -31,11 +31,11 @@ pub struct Frame {
 
 impl Frame {
     /// Construct a new Frame from the data in a fcTL chunk
-    pub fn from_fctl_data(byte_data: &[u8]) -> PngResult<Frame> {
+    pub fn from_fctl_data(byte_data: &[u8]) -> PngResult<Self> {
         if byte_data.len() < 26 {
             return Err(PngError::TruncatedData);
         }
-        Ok(Frame {
+        Ok(Self {
             width: read_be_u32(&byte_data[4..8]),
             height: read_be_u32(&byte_data[8..12]),
             x_offset: read_be_u32(&byte_data[12..16]),
