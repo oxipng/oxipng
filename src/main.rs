@@ -205,7 +205,7 @@ fn parse_opts_into_struct(
     };
 
     // Get custom brute settings and rebuild the filter set to apply them
-    let mut brute_lines = matches.get_one::<usize>("brute-lines").cloned();
+    let mut brute_lines = matches.get_one::<usize>("brute-lines").copied();
     let mut brute_level = matches.get_one::<i64>("brute-level").map(|x| *x as u8);
     let mut new_filters = IndexSet::new();
     for mut f in opts.filters.drain(..) {
