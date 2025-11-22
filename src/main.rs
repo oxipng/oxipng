@@ -19,7 +19,12 @@ mod rayon;
 #[cfg(feature = "zopfli")]
 use std::num::NonZeroU64;
 use std::{
-    ffi::OsString, fs::DirBuilder, io::Write, path::PathBuf, process::ExitCode, time::Duration,
+    ffi::{OsStr, OsString},
+    fs::DirBuilder,
+    io::Write,
+    path::PathBuf,
+    process::ExitCode,
+    time::Duration,
 };
 
 use clap::ArgMatches;
@@ -143,7 +148,7 @@ fn collect_files(
         } else {
             // Skip non png files if not given on top level
             if !top_level && {
-                let extension = input.extension().map(|f| f.to_ascii_lowercase());
+                let extension = input.extension().map(OsStr::to_ascii_lowercase);
                 extension != Some(OsString::from("png"))
                     && extension != Some(OsString::from("apng"))
             } {
