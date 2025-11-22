@@ -659,7 +659,7 @@ fn recompress_frames(
 }
 
 /// Check if an image was already optimized prior to oxipng's operations
-fn is_fully_optimized(original_size: usize, optimized_size: usize, opts: &Options) -> bool {
+const fn is_fully_optimized(original_size: usize, optimized_size: usize, opts: &Options) -> bool {
     original_size <= optimized_size && !opts.force
 }
 

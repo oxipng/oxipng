@@ -149,7 +149,7 @@ fn deinterlace_bytes(png: &PngImage) -> Vec<u8> {
     lines.concat()
 }
 
-fn increment_pass(current_pass: &mut u8, ihdr: &IhdrData) -> bool {
+const fn increment_pass(current_pass: &mut u8, ihdr: &IhdrData) -> bool {
     if *current_pass == 7 {
         return false;
     }
