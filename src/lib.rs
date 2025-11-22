@@ -275,8 +275,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
         (OutFile::Path { path, .. }, _) => {
             let output_path = path
                 .as_ref()
-                .map(PathBuf::as_path)
-                .unwrap_or_else(|| input.path().unwrap());
+                .map_or_else(|| input.path().unwrap(), PathBuf::as_path);
             let out_file = File::create(output_path)
                 .map_err(|err| PngError::WriteFailed(output_path.display().to_string(), err))?;
             if let Some(metadata_input) = &opt_metadata_preserved {
