@@ -348,7 +348,7 @@ impl PngImage {
                 last_pass = line.pass;
             }
             last_line.resize(line.data.len(), 0);
-            let filter = RowFilter::try_from(line.filter).map_err(|_| PngError::InvalidData)?;
+            let filter = RowFilter::try_from(line.filter).map_err(|()| PngError::InvalidData)?;
             filter.unfilter_line(bpp, line.data, &last_line, &mut unfiltered_buf);
             unfiltered.extend_from_slice(&unfiltered_buf);
             std::mem::swap(&mut last_line, &mut unfiltered_buf);
