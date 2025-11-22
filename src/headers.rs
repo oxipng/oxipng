@@ -44,9 +44,7 @@ impl IhdrData {
             (w * bpp).div_ceil(8) * h
         }
 
-        if !self.interlaced {
-            bitmap_size(bpp, w, h) + h
-        } else {
+        if self.interlaced {
             let mut size = bitmap_size(bpp, (w + 7) >> 3, (h + 7) >> 3) + ((h + 7) >> 3);
             if w > 4 {
                 size += bitmap_size(bpp, (w + 3) >> 3, (h + 7) >> 3) + ((h + 7) >> 3);
@@ -60,6 +58,8 @@ impl IhdrData {
                 size += bitmap_size(bpp, w >> 1, (h + 1) >> 1) + ((h + 1) >> 1);
             }
             size + bitmap_size(bpp, w, h >> 1) + (h >> 1)
+        } else {
+            bitmap_size(bpp, w, h) + h
         }
     }
 }
