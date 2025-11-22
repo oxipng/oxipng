@@ -123,7 +123,7 @@ impl PngData {
                     });
                 }
                 b"acTL" => {
-                    warn!("Stripping animation data from APNG - image will become standard PNG")
+                    warn!("Stripping animation data from APNG - image will become standard PNG");
                 }
                 _ => (),
             }
