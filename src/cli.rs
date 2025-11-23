@@ -1,9 +1,17 @@
 use std::{num::NonZeroU64, path::PathBuf};
 
+use clap::builder::Styles;
+use clap::builder::styling::{AnsiColor, Effects};
 use clap::{Arg, ArgAction, Command, builder::ArgPredicate, value_parser};
 use parse_size::parse_size;
 
 include!("display_chunks.rs");
+
+const STYLES: Styles = Styles::styled()
+    .header(AnsiColor::Green.on_default().effects(Effects::BOLD))
+    .usage(AnsiColor::Green.on_default().effects(Effects::BOLD))
+    .literal(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+    .placeholder(AnsiColor::Cyan.on_default());
 
 pub fn build_command() -> Command {
     // Note: clap 'wrap_help' is enabled to automatically wrap lines according to terminal width.
@@ -15,6 +23,7 @@ pub fn build_command() -> Command {
         .version(env!("CARGO_PKG_VERSION"))
         .author("Joshua Holmer <jholmer.in@gmail.com>")
         .about("Losslessly improve compression of PNG files")
+        .styles(STYLES)
         .arg(
             Arg::new("files")
                 .help("File(s) to compress (use '-' for stdin)")
