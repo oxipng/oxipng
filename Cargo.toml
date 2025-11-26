@@ -20,7 +20,7 @@ homepage = "https://github.com/oxipng/oxipng"
 license = "MIT"
 name = "oxipng"
 repository = "https://github.com/oxipng/oxipng"
-version = "9.1.5"
+version = "10.0.0"
 rust-version = "1.85.1"
 
 [badges]

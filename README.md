@@ -86,7 +86,7 @@ preamble to an already existing one:
 ```yaml
 repos:
   - repo: https://github.com/oxipng/oxipng
-    rev: v9.1.5
+    rev: v10.0.0
     hooks:
       - id: oxipng
         args: ["-o", "4", "--strip", "safe", "--alpha"]
@@ -117,7 +117,7 @@ input filename, into the [optimize function](https://docs.rs/oxipng/latest/oxipn
 It is recommended to disable the "binary" feature when including Oxipng as a library. Currently, there is
 no simple way to just disable one feature in Cargo, it has to be done by disabling default features
 and specifying the desired ones, for example:
-`oxipng = { version = "9.0", features = ["parallel", "zopfli", "filetime"], default-features = false }`
+`oxipng = { version = "10.0", features = ["parallel", "zopfli", "filetime"], default-features = false }`
 
 ## Software using Oxipng
 
