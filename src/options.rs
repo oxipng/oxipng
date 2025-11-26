@@ -149,6 +149,10 @@ pub struct Options {
     ///
     /// Default: `true`
     pub fast_evaluation: bool,
+    #[doc(hidden)]
+    pub max_candidates: usize,
+    #[doc(hidden)]
+    pub candidate_threshold: f64,
     /// Maximum amount of time to spend on optimizations.
     /// Further potential optimizations are skipped if the timeout is exceeded.
     ///
@@ -296,6 +300,8 @@ impl Default for Options {
             strip: StripChunks::None,
             deflater: Deflater::Libdeflater { compression: 11 },
             fast_evaluation: true,
+            max_candidates: 0,
+            candidate_threshold: 0.0,
             timeout: None,
             max_decompressed_size: None,
         }
