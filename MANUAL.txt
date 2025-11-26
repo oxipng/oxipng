@@ -1,4 +1,4 @@
-oxipng 9.1.5
+oxipng 10.0.0
 Losslessly improve compression of PNG files
 
 Usage: oxipng [OPTIONS] <files>...
@@ -13,14 +13,14 @@ Options:
           compression. Lower levels are faster, higher levels provide better compression, though
           with increasingly diminishing returns.
           
-              0   => --zc 5 --fast               (1 trial, determined heuristically)
-              1   => --zc 10 --fast              (1 trial, determined heuristically)
-              2   => --zc 11 -f 0,1,6,7 --fast   (4 fast trials, 1 main trial)
-              3   => --zc 11 -f 0,7,8,9          (4 trials)
-              4   => --zc 12 -f 0,7,8,9          (4 trials)
-              5   => --zc 12 -f 0,1,2,5,6,7,8,9  (8 trials)
-              6   => --zc 12 -f 0-9              (10 trials)
-              max =>                             (stable alias for the max level)
+              0   => --zc 5  --fast              (filter chosen heuristically)
+              1   => --zc 10 --fast              (filter chosen heuristically)
+              2   => --zc 11 -f 0,1,6,7 --fast
+              3   => --zc 11 -f 0,7,8,9         --brute-level 1 --brute-lines 3
+              4   => --zc 12 -f 0,7,8,9         --brute-level 1 --brute-lines 4
+              5   => --zc 12 -f 0,1,2,5,6,7,8,9 --brute-level 4 --brute-lines 4
+              6   => --zc 12 -f 0-9             --brute-level 5 --brute-lines 8
+              max => (stable alias for the maximum level)
           
           Manually specifying a compression option (zc, f, etc.) will override the optimization
           preset, regardless of the order you write the arguments.
@@ -45,7 +45,7 @@ Options:
   -p, --preserve
           Preserve file permissions and timestamps if possible
 
-  -P, --pretend
+  -d, --dry-run
           Do not write any files, only show compression results
 
   -s
@@ -61,10 +61,14 @@ Options:
           
           CAUTION: 'all' will convert APNGs to standard PNGs.
           
-          Note that 'bKGD', 'sBIT' and 'hIST' will be forcibly stripped if the color type or bit
-          depth is changed, regardless of any options set.
+          Please note that regardless of any options set, some chunks will necessarily be stripped
+          when invalidated by the optimization:
+              bKGD, sBIT, hIST: Stripped if the color type or bit depth changes.
+              iDOT: Always stripped.
+              caBX: Stripped if it contains C2PA metadata. If explicitly retained by `--keep`,
+              optimization will be aborted.
           
-          The default when --strip is not passed is to keep all metadata.
+          The default when --strip is not passed is to keep all chunks that remain valid.
 
       --keep <list>
           Strip all metadata chunks except those in the comma-separated list. The special value
@@ -79,17 +83,17 @@ Options:
           but take care as while this is “visually lossless”, it is technically a lossy
           transformation and may be unsuitable for some applications.
 
-  -i, --interlace <type>
-          Set the PNG interlacing type, where <type> is one of:
+  -i, --interlace <mode>
+          Set the PNG interlacing mode, where <mode> is one of:
           
-              0     =>  Remove interlacing from all images that are processed
-              1     =>  Apply Adam7 interlacing on all images that are processed
-              keep  =>  Keep the existing interlacing type of each image
+              off   =>  Remove interlacing from all images that are processed
+              on    =>  Apply Adam7 interlacing on all images that are processed
+              keep  =>  Keep the existing interlacing mode of each image
           
           Note that interlacing can add 25-50% to the size of an optimized image. Only use it if you
           believe the benefits outweigh the costs for your use case.
           
-          [default: 0]
+          [default: off]
 
       --scale16
           Forcibly reduce images with 16 bits per channel to 8 bits per channel. This is a lossy
@@ -119,9 +123,9 @@ Options:
           
           Heuristic strategies (try to find the best delta filter for each line)
               5  =>  MinSum    Minimum sum of absolute differences
-              6  =>  Entropy   Highest Shannon entropy
+              6  =>  Entropy   Smallest Shannon entropy
               7  =>  Bigrams   Lowest count of distinct bigrams
-              8  =>  BigEnt    Highest Shannon entropy of bigrams
+              8  =>  BigEnt    Smallest Shannon entropy of bigrams
               9  =>  Brute     Smallest compressed size (slow)
           
           The default value depends on the optimization level preset.
@@ -159,12 +163,12 @@ Options:
 
       --fix
           Do not perform checksum validation of PNG chunks. This may allow some files with errors to
-          be processed successfully.
+          be processed successfully. The output will always have correct checksums.
 
       --force
           Write the output even if it is larger than the input
 
-  -Z, --zopfli
+  -z, --zopfli
           Use the much slower but stronger Zopfli compressor for main compression trials.
           Recommended use is with '-o max' and '--fast'.
 
@@ -174,12 +178,33 @@ Options:
           
           [default: 15]
 
+      --ziwi <iterations>
+          Stop Zopfli compression after this number of iterations without improvement. Use this in
+          conjunction with a high value for '--zi' to achieve better compression in reasonable time.
+
+      --brute-level <level>
+          Set the libdeflate compression level to use with the Brute filter strategy. Sane values
+          are 1-5. Higher values are not necessarily better.
+
+      --brute-lines <lines>
+          Set the number of lines to compress at once with the Brute filter strategy. Sane values
+          are 2-16. Higher values are not necessarily better.
+
       --timeout <secs>
           Maximum amount of time, in seconds, to spend on optimizations. Oxipng will check the
           timeout before each transformation or compression trial, and will stop trying to optimize
           the file if the timeout is exceeded. Note that this does not cut short any operations that
           are already in progress, so it is currently of limited effectiveness for large files with
           high compression levels.
+
+      --max-raw-size <bytes>
+          Maximum size to allow for the input image. If the raw, decompressed image data (or the
+          file size) of the image exceeds this size, it will be skipped. This is useful for limiting
+          memory usage or avoiding long processing times on large images. The value may be specified
+          with a unit suffix such as k, KB, m, MB, etc.
+          
+          The decompressed size of an image is roughly equal to width * height * bit-depth / 8. E.g.
+          a 1920x1080 image with 24-bit color depth would be roughly 6MB.
 
   -t, --threads <num>
           Set the maximum number of threads to use. Oxipng uses multithreading to evaluate multiple
