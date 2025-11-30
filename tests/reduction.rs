@@ -41,7 +41,7 @@ fn test_it_converts(
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
@@ -999,7 +999,7 @@ fn palette_should_be_reduced_with_dupes() {
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
@@ -1036,7 +1036,7 @@ fn palette_should_be_reduced_with_unused() {
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
@@ -1074,7 +1074,7 @@ fn palette_should_be_reduced_with_bkgd() {
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
@@ -1112,7 +1112,7 @@ fn palette_should_be_reduced_with_both() {
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
@@ -1149,7 +1149,7 @@ fn palette_should_be_reduced_with_missing() {
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
