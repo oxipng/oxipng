@@ -133,10 +133,14 @@ Strip metadata chunks, where <mode> is one of:
 
 CAUTION: 'all' will convert APNGs to standard PNGs.
 
-Note that 'bKGD', 'sBIT' and 'hIST' will be forcibly stripped if the color type or bit \
-depth is changed, regardless of any options set.
+Please note that regardless of any options set, some chunks will necessarily be stripped \
+when invalidated by the optimization:
+    bKGD, sBIT, hIST: Stripped if the color type or bit depth changes.
+    iDOT: Always stripped.
+    caBX: Stripped if it contains C2PA metadata. If explicitly retained by `--keep`, \
+    optimization will be aborted.
 
-The default when --strip is not passed is to keep all metadata.",
+The default when --strip is not passed is to keep all chunks that remain valid.",
                        DISPLAY_CHUNKS
                            .iter()
                            .map(|c| String::from_utf8_lossy(c))
