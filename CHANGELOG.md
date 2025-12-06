@@ -1,3 +1,22 @@
+## Version 10.0.0
+
+- [Breaking] CLI: Change short zopfli flag from `-Z` to `-z`.
+- [Breaking] CLI: Change `--pretend`/`-P` to `--dry-run`/`-D`.
+- [Breaking] CLI: Change `--interlace` options from `1`/`0` to `on`/`off`.
+- [Breaking] API: Change `Options.interlace: Option<Interlacing>` to `Options.interlace: Option<bool>`.
+- [Breaking] API: Change `Options.filter: IndexSet<RowFilter>` to `Options.filters: IndexSet<FilterStrategy>`.
+- [Breaking] API: Change `Options.deflate: Deflaters` to `Options.deflater: Deflater`.
+- [Breaking] API: Change `Deflaters::Zopfli { .. }` to `Deflater::Zopfli(ZopfliOptions { .. })`.
+- [Breaking] API: Change `optimize()` to return `(usize, usize)`, with original and optimized sizes.
+- [Feature] Allow zopfli iterations higher than 255.
+- [Feature] Add `--ziwi` option for zopfli iterations without improvement.
+- [Feature] Add `--max-raw-size` option to skip images that are too large.
+- [Feature] Add `--brute-level` and `--brute-lines` options for advanced control of Brute filter.
+- [Improvement] Reduce memory usage for `fast` mode.
+- [Improvement] Slightly improve compression with Brute filter at levels 5 and 6.
+- [Misc] Change `--preserve` option to no longer preserve last access time.
+- [Misc] Make help output colored.
+
 ## Version 9.1.5
 
 - [Feature] Add `--sequential` option to process files sequentially rather than in parallel.

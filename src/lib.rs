@@ -1,23 +1,4 @@
-#![warn(trivial_casts, trivial_numeric_casts, unused_import_braces)]
-#![deny(missing_debug_implementations, missing_copy_implementations)]
-#![warn(clippy::expl_impl_clone_on_copy)]
-#![warn(clippy::float_cmp_const)]
-#![warn(clippy::linkedlist)]
-#![warn(clippy::map_flatten)]
-#![warn(clippy::match_same_arms)]
-#![warn(clippy::mem_forget)]
-#![warn(clippy::mut_mut)]
-#![warn(clippy::mutex_integer)]
-#![warn(clippy::needless_continue)]
-#![warn(clippy::path_buf_push_overwrite)]
-#![warn(clippy::range_plus_one)]
-#![allow(clippy::cognitive_complexity)]
-#![allow(clippy::upper_case_acronyms)]
-#![cfg_attr(
-    not(feature = "zopfli"),
-    allow(irrefutable_let_patterns),
-    allow(unreachable_patterns)
-)]
+#![cfg_attr(not(feature = "zopfli"), allow(unreachable_patterns))]
 
 #[cfg(feature = "parallel")]
 extern crate rayon;
