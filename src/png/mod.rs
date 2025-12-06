@@ -123,7 +123,7 @@ impl PngData {
                     });
                 }
                 b"acTL" => {
-                    warn!("Stripping animation data from APNG - image will become standard PNG")
+                    warn!("Stripping animation data from APNG - image will become standard PNG");
                 }
                 _ => (),
             }
@@ -133,9 +133,8 @@ impl PngData {
         if idat_data.is_empty() {
             return Err(PngError::ChunkMissing("IDAT"));
         }
-        let ihdr_chunk = match key_chunks.remove(b"IHDR") {
-            Some(ihdr) => ihdr,
-            None => return Err(PngError::ChunkMissing("IHDR")),
+        let Some(ihdr_chunk) = key_chunks.remove(b"IHDR") else {
+            return Err(PngError::ChunkMissing("IHDR"));
         };
         let ihdr = parse_ihdr_chunk(
             &ihdr_chunk,
@@ -310,11 +309,10 @@ impl PngImage {
         match &self.ihdr.color_type {
             ColorType::Indexed { palette } => {
                 let plte = 12 + palette.len() * 3;
-                if let Some(trns) = palette.iter().rposition(|p| p.a != 255) {
-                    plte + 12 + trns + 1
-                } else {
-                    plte
-                }
+                palette
+                    .iter()
+                    .rposition(|p| p.a != 255)
+                    .map_or(plte, |trns| plte + 12 + trns + 1)
             }
             ColorType::Grayscale { transparent_shade } if transparent_shade.is_some() => 12 + 2,
             ColorType::RGB { transparent_color } if transparent_color.is_some() => 12 + 6,
@@ -348,7 +346,7 @@ impl PngImage {
                 last_pass = line.pass;
             }
             last_line.resize(line.data.len(), 0);
-            let filter = RowFilter::try_from(line.filter).map_err(|_| PngError::InvalidData)?;
+            let filter = RowFilter::try_from(line.filter).map_err(|()| PngError::InvalidData)?;
             filter.unfilter_line(bpp, line.data, &last_line, &mut unfiltered_buf);
             unfiltered.extend_from_slice(&unfiltered_buf);
             std::mem::swap(&mut last_line, &mut unfiltered_buf);

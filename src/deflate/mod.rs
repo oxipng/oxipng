@@ -1,8 +1,9 @@
 mod deflater;
+use std::{fmt, fmt::Display};
+
 pub use deflater::{crc32, deflate, inflate};
 
 use crate::{PngError, PngResult};
-use std::{fmt, fmt::Display};
 
 #[cfg(feature = "zopfli")]
 mod zopfli_oxipng;

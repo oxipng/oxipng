@@ -112,3 +112,19 @@ assets = [
     ["README.md", "usr/share/doc/oxipng/", "644"],
     ["CHANGELOG.md", "usr/share/doc/oxipng/", "644"],
 ]
+
+[lints.clippy]
+unnecessary_semicolon = "warn"
+use_self = "warn"
+ignored_unit_patterns = "warn"
+unseparated_literal_suffix = "warn"
+missing_const_for_fn = "warn"
+redundant_closure_for_method_calls = "warn"
+option_if_let_else = "warn"
+redundant_clone = "warn"
+semicolon_if_nothing_returned = "warn"
+cloned_instead_of_copied = "warn"
+if_not_else = "warn"
+useless_let_if_seq = "warn"
+manual_let_else = "warn"
+map_unwrap_or = "warn"

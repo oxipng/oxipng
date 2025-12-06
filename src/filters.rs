@@ -127,22 +127,18 @@ impl RowFilter {
             }
             Self::Average => {
                 for (i, byte) in data.iter().enumerate() {
-                    buf.push(match i.checked_sub(bpp) {
-                        Some(x) => byte.wrapping_sub(
-                            ((u16::from(data[x]) + u16::from(prev_line[i])) >> 1) as u8,
-                        ),
-                        None => byte.wrapping_sub(prev_line[i] >> 1),
-                    });
+                    buf.push(byte.wrapping_sub(i.checked_sub(bpp).map_or_else(
+                        || prev_line[i] >> 1,
+                        |x| ((u16::from(data[x]) + u16::from(prev_line[i])) >> 1) as u8,
+                    )));
                 }
             }
             Self::Paeth => {
                 for (i, byte) in data.iter().enumerate() {
-                    buf.push(match i.checked_sub(bpp) {
-                        Some(x) => {
-                            byte.wrapping_sub(paeth_predictor(data[x], prev_line[i], prev_line[x]))
-                        }
-                        None => byte.wrapping_sub(prev_line[i]),
-                    });
+                    buf.push(byte.wrapping_sub(i.checked_sub(bpp).map_or_else(
+                        || prev_line[i],
+                        |x| paeth_predictor(data[x], prev_line[i], prev_line[x]),
+                    )));
                 }
             }
         }
@@ -241,10 +237,7 @@ impl RowFilter {
             Self::Sub => {
                 for (i, &cur) in data.iter().enumerate() {
                     let prev_byte = i.checked_sub(bpp).and_then(|x| buf.get(x).copied());
-                    buf.push(match prev_byte {
-                        Some(b) => cur.wrapping_add(b),
-                        None => cur,
-                    });
+                    buf.push(prev_byte.map_or(cur, |b| cur.wrapping_add(b)));
                 }
             }
             Self::Up => {
@@ -257,10 +250,10 @@ impl RowFilter {
             Self::Average => {
                 for (i, (&cur, &last)) in data.iter().zip(prev_line).enumerate() {
                     let prev_byte = i.checked_sub(bpp).and_then(|x| buf.get(x).copied());
-                    buf.push(match prev_byte {
-                        Some(b) => cur.wrapping_add(((u16::from(b) + u16::from(last)) >> 1) as u8),
-                        None => cur.wrapping_add(last >> 1),
-                    });
+                    buf.push(cur.wrapping_add(prev_byte.map_or_else(
+                        || last >> 1,
+                        |b| ((u16::from(b) + u16::from(last)) >> 1) as u8,
+                    )));
                 }
             }
             Self::Paeth => {

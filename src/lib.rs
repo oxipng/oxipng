@@ -28,7 +28,7 @@ mod rayon;
 use std::{
     fs::{File, Metadata},
     io::{BufWriter, Read, Write, stdin, stdout},
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -275,8 +275,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
         (OutFile::Path { path, .. }, _) => {
             let output_path = path
                 .as_ref()
-                .map(|p| p.as_path())
-                .unwrap_or_else(|| input.path().unwrap());
+                .map_or_else(|| input.path().unwrap(), PathBuf::as_path);
             let out_file = File::create(output_path)
                 .map_err(|err| PngError::WriteFailed(output_path.display().to_string(), err))?;
             if let Some(metadata_input) = &opt_metadata_preserved {
@@ -449,9 +448,9 @@ fn optimize_raw(
 
     let (result, deflater) = if opts.idat_recoding || reduction_occurred {
         let result = perform_trials(
-            new_image.clone(),
+            new_image,
             opts,
-            deadline.clone(),
+            deadline,
             max_size,
             eval_result,
             eval_filters,
@@ -497,7 +496,7 @@ fn perform_trials(
         if !filters.is_empty() {
             trace!("Evaluating {} filters", filters.len());
             let eval = Evaluator::new(
-                deadline.clone(),
+                deadline,
                 filters,
                 eval_deflater,
                 opts.optimize_alpha,
@@ -529,7 +528,7 @@ fn perform_trials(
                     trace!(">{bytes} bytes");
                 }
                 Err(_) => (),
-            };
+            }
         }
         return Some(result);
     }
@@ -659,7 +658,7 @@ fn recompress_frames(
 }
 
 /// Check if an image was already optimized prior to oxipng's operations
-fn is_fully_optimized(original_size: usize, optimized_size: usize, opts: &Options) -> bool {
+const fn is_fully_optimized(original_size: usize, optimized_size: usize, opts: &Options) -> bool {
     original_size <= optimized_size && !opts.force
 }
 
@@ -674,7 +673,7 @@ fn copy_permissions(metadata_input: &Metadata, out_file: &File) -> PngResult<()>
 }
 
 #[cfg(not(feature = "filetime"))]
-fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
+const fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
     Ok(())
 }
 

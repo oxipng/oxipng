@@ -40,7 +40,7 @@ fn test_it_converts(
     match oxipng::optimize(&InFile::Path(input), &output, &opts) {
         Ok(_) => (),
         Err(x) => panic!("{}", x),
-    };
+    }
     let output = output.path().unwrap();
     assert!(output.exists());
 
