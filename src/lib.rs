@@ -673,7 +673,7 @@ fn copy_permissions(metadata_input: &Metadata, out_file: &File) -> PngResult<()>
 }
 
 #[cfg(not(feature = "filetime"))]
-fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
+const fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
     Ok(())
 }
 

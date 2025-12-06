@@ -44,7 +44,7 @@ fn load_png_image_from_memory(png_data: &[u8]) -> Result<Vec<RgbaImage>, image::
         decoder
             .apng()?
             .into_frames()
-            .map(|f| f.map(|f| f.into_buffer()))
+            .map(|f| f.map(image::Frame::into_buffer))
             .collect()
     } else {
         DynamicImage::from_decoder(decoder).map(|i| vec![i.into_rgba8()])
