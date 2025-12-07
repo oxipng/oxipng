@@ -120,8 +120,8 @@ impl Evaluator {
     }
 
     #[cfg(not(feature = "parallel"))]
-    pub fn get_best_candidate(self) -> Option<Candidate> {
-        self.eval_best_candidate.into_inner()
+    pub fn get_best_candidates(self, _limit: usize) -> Vec<Candidate> {
+        vec![]
     }
 
     /// Set best size, if known in advance
