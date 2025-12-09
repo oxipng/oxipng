@@ -15,9 +15,9 @@ pub enum PngError {
     InvalidData,
     InvalidDepthForType(BitDepth, ColorType),
     NotPNG,
-    ReadFailed(String, std::io::Error),
+    ReadFailed(Box<str>, std::io::Error),
     TruncatedData,
-    WriteFailed(String, std::io::Error),
+    WriteFailed(Box<str>, std::io::Error),
     Other(Box<str>),
 }
 

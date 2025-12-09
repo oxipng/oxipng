@@ -52,7 +52,8 @@ impl PngData {
     }
 
     pub fn read_file(filepath: &Path) -> Result<Vec<u8>, PngError> {
-        fs::read(filepath).map_err(|e| PngError::ReadFailed(filepath.display().to_string(), e))
+        fs::read(filepath)
+            .map_err(|e| PngError::ReadFailed(filepath.display().to_string().into_boxed_str(), e))
     }
 
     /// Create a new `PngData` struct by reading a slice
