@@ -86,7 +86,7 @@ impl RawImage {
         color_type: ColorType,
         bit_depth: BitDepth,
         data: Vec<u8>,
-    ) -> Result<Self, PngError> {
+    ) -> PngResult<Self> {
         // Validate bit depth
         let valid_depth = match color_type {
             ColorType::Grayscale { .. } => true,

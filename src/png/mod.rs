@@ -7,7 +7,7 @@ use rgb::ComponentSlice;
 use rustc_hash::FxHashMap;
 
 use crate::{
-    Options,
+    Options, PngResult,
     apng::*,
     colors::{BitDepth, ColorType},
     deflate,
@@ -45,19 +45,19 @@ pub struct PngData {
 impl PngData {
     /// Create a new `PngData` struct by opening a file
     #[inline]
-    pub fn new(filepath: &Path, opts: &Options) -> Result<Self, PngError> {
+    pub fn new(filepath: &Path, opts: &Options) -> PngResult<Self> {
         let byte_data = Self::read_file(filepath)?;
 
         Self::from_slice(&byte_data, opts)
     }
 
-    pub fn read_file(filepath: &Path) -> Result<Vec<u8>, PngError> {
+    pub fn read_file(filepath: &Path) -> PngResult<Vec<u8>> {
         fs::read(filepath)
             .map_err(|e| PngError::ReadFailed(filepath.display().to_string().into_boxed_str(), e))
     }
 
     /// Create a new `PngData` struct by reading a slice
-    pub fn from_slice(byte_data: &[u8], opts: &Options) -> Result<Self, PngError> {
+    pub fn from_slice(byte_data: &[u8], opts: &Options) -> PngResult<Self> {
         let mut byte_offset: usize = 0;
         // Test that png header is valid
         let header = byte_data.get(0..8).ok_or(PngError::TruncatedData)?;
@@ -249,7 +249,7 @@ impl PngData {
 }
 
 impl PngImage {
-    pub fn new(ihdr: IhdrData, compressed_data: &[u8]) -> Result<Self, PngError> {
+    pub fn new(ihdr: IhdrData, compressed_data: &[u8]) -> PngResult<Self> {
         let raw_data = deflate::inflate(compressed_data, ihdr.raw_data_size())?;
 
         // Reject files with incorrect width/height or truncated data
@@ -333,7 +333,7 @@ impl PngImage {
     }
 
     /// Reverse all filters applied on the image, returning an unfiltered IDAT bytestream
-    fn unfilter_image(&self) -> Result<Vec<u8>, PngError> {
+    fn unfilter_image(&self) -> PngResult<Vec<u8>> {
         let mut unfiltered = Vec::with_capacity(self.data.len());
         let bpp = self.bytes_per_channel() * self.channels_per_pixel();
         let mut last_line: Vec<u8> = Vec::new();
