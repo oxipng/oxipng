@@ -257,9 +257,8 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
             let output_path = path
                 .as_ref()
                 .map_or_else(|| input.path().unwrap(), PathBuf::as_path);
-            let out_file = File::create(output_path).map_err(|err| {
-                PngError::WriteFailed(output_path.display().to_string().into_boxed_str(), err)
-            })?;
+            let out_file = File::create(output_path)
+                .map_err(|err| PngError::WriteFailed(output_path.display().to_string(), err))?;
             if let Some(metadata_input) = &opt_metadata_preserved {
                 copy_permissions(metadata_input, &out_file)?;
             }
@@ -269,9 +268,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
                 .write_all(&optimized_output)
                 // flush BufWriter so IO errors don't get swallowed silently on close() by drop!
                 .and_then(|()| buffer.flush())
-                .map_err(|e| {
-                    PngError::WriteFailed(output_path.display().to_string().into_boxed_str(), e)
-                })?;
+                .map_err(|e| PngError::WriteFailed(output_path.display().to_string(), e))?;
             // force drop and thereby closing of file handle before modifying any timestamp
             std::mem::drop(buffer);
             if let Some(metadata_input) = &opt_metadata_preserved {
