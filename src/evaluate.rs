@@ -154,6 +154,19 @@ impl Evaluator {
                 let idat_data = deflater.deflate(&filtered, best_candidate_size.get());
                 if let Ok(idat_data) = idat_data {
                     let estimated_output_size = image.estimated_output_size(&idat_data);
+                    trace!(
+                        "Eval: {}-bit {:23} {:8}   {} bytes",
+                        image.ihdr.bit_depth, description, filter, estimated_output_size
+                    );
+
+                    // Skip if it exceeds best known size. (This is important to ensure
+                    // the evaluator returns no result when all candidates are too large.)
+                    if let Some(max) = best_candidate_size.get() {
+                        if estimated_output_size > max {
+                            return;
+                        }
+                    }
+
                     // We only need to retain the IDAT data in the final round
                     let new = Candidate {
                         image: image.clone(),
@@ -164,10 +177,6 @@ impl Evaluator {
                         nth,
                     };
                     best_candidate_size.set_min(estimated_output_size);
-                    trace!(
-                        "Eval: {}-bit {:23} {:8}   {} bytes",
-                        image.ihdr.bit_depth, description, filter, estimated_output_size
-                    );
 
                     #[cfg(feature = "parallel")]
                     {
