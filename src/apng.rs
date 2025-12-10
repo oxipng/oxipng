@@ -1,4 +1,4 @@
-use arrayvec::ArrayVec;
+use std::io::Write;
 
 use crate::{
     PngResult,
@@ -50,33 +50,17 @@ impl Frame {
 
     /// Construct the data for a fcTL chunk using the given sequence number
     #[must_use]
-    pub fn fctl_data(&self, sequence_number: u32) -> ArrayVec<u8, 26> {
-        let mut byte_data = const { ArrayVec::<_, 26>::new_const() };
-        byte_data
-            .try_extend_from_slice(&sequence_number.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&self.width.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&self.height.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&self.x_offset.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&self.y_offset.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&self.delay_num.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&self.delay_den.to_be_bytes())
-            .unwrap();
-        byte_data
-            .try_extend_from_slice(&[self.dispose_op, self.blend_op])
-            .unwrap();
-
+    pub fn fctl_data(&self, sequence_number: u32) -> Vec<u8> {
+        let mut byte_data = Vec::with_capacity(26);
+        byte_data.write_all(&sequence_number.to_be_bytes()).unwrap();
+        byte_data.write_all(&self.width.to_be_bytes()).unwrap();
+        byte_data.write_all(&self.height.to_be_bytes()).unwrap();
+        byte_data.write_all(&self.x_offset.to_be_bytes()).unwrap();
+        byte_data.write_all(&self.y_offset.to_be_bytes()).unwrap();
+        byte_data.write_all(&self.delay_num.to_be_bytes()).unwrap();
+        byte_data.write_all(&self.delay_den.to_be_bytes()).unwrap();
+        byte_data.push(self.dispose_op);
+        byte_data.push(self.blend_op);
         byte_data
     }
 

@@ -45,7 +45,6 @@ libdeflater = "1.25.0"
 log = "0.4.28"
 bitvec = "1.0.1"
 rustc-hash = "2.1.1"
-arrayvec = "0.7.6"
 
 [dependencies.env_logger]
 optional = true
