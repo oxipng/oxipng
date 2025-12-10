@@ -1,4 +1,4 @@
-use std::{fs, io::Write, path::Path, sync::Arc};
+use std::{fs, path::Path, sync::Arc};
 
 use bitvec::bitarr;
 use libdeflater::{CompressionLvl, Compressor};
@@ -165,17 +165,15 @@ impl PngData {
         let mut output = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
         // IHDR
         let mut ihdr_data = Vec::with_capacity(13);
-        ihdr_data.write_all(&self.raw.ihdr.width.to_be_bytes()).ok();
-        ihdr_data
-            .write_all(&self.raw.ihdr.height.to_be_bytes())
-            .ok();
-        ihdr_data.write_all(&[self.raw.ihdr.bit_depth as u8]).ok();
-        ihdr_data
-            .write_all(&[self.raw.ihdr.color_type.png_header_code()])
-            .ok();
-        ihdr_data.write_all(&[0]).ok(); // Compression -- deflate
-        ihdr_data.write_all(&[0]).ok(); // Filter method -- 5-way adaptive filtering
-        ihdr_data.write_all(&[self.raw.ihdr.interlaced as u8]).ok();
+        ihdr_data.extend_from_slice(&self.raw.ihdr.width.to_be_bytes());
+        ihdr_data.extend_from_slice(&self.raw.ihdr.height.to_be_bytes());
+        ihdr_data.extend_from_slice(&[self.raw.ihdr.bit_depth as u8]);
+        ihdr_data.extend_from_slice(&[
+            self.raw.ihdr.color_type.png_header_code(),
+            0, // Compression -- deflate
+            0, // Filter method -- 5-way adaptive filtering
+            self.raw.ihdr.interlaced as u8,
+        ]);
         write_png_block(b"IHDR", &ihdr_data, &mut output);
         // Ancillary chunks - split into those that come before IDAT and those that come after
         let mut aux_split = self.aux_chunks.split(|c| &c.name == b"IDAT");
