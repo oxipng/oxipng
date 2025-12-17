@@ -42,7 +42,7 @@ zopfli = { version = "0.8.3", optional = true, default-features = false, feature
 rgb = "0.8.52"
 indexmap = "2.12.1"
 libdeflater = "1.25.0"
-log = "0.4.28"
+log = "0.4.29"
 bitvec = "1.0.1"
 rustc-hash = "2.1.1"
 
