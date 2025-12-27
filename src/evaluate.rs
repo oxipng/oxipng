@@ -118,7 +118,7 @@ impl Evaluator {
 
     /// Check if the image is smaller than others
     pub fn try_image(&self, image: Arc<PngImage>) {
-        let description = format!("{}", image.ihdr.color_type);
+        let description = image.ihdr.color_type.to_string();
         self.try_image_with_description(image, &description);
     }
 

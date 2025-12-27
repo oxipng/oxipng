@@ -227,6 +227,14 @@ losslessly.")
                 .conflicts_with("verbose"),
         )
         .arg(
+            Arg::new("json")
+                .help("Print results as JSON")
+                .short('j')
+                .long("json")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("stdout"),
+        )
+        .arg(
             Arg::new("filters")
                 .help("Filters to try (0-9; see '--help' for details)")
                 .long_help("\

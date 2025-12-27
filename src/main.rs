@@ -19,7 +19,9 @@ use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
 #[cfg(feature = "zopfli")]
 use oxipng::ZopfliOptions;
-use oxipng::{Deflater, FilterStrategy, InFile, Options, OutFile, PngError, StripChunks};
+use oxipng::{
+    Deflater, FilterStrategy, InFile, OptimizationResult, Options, OutFile, PngError, StripChunks,
+};
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -51,15 +53,22 @@ fn main() -> ExitCode {
     #[cfg(not(windows))]
     let inputs: Vec<_> = file_args.collect();
     let using_stdin = inputs.len() == 1 && inputs[0].to_str() == Some("-");
+    if using_stdin && out_dir.is_some() {
+        error!("Cannot use --dir when reading from stdin.");
+        return ExitCode::FAILURE;
+    }
+    if using_stdin && matches!(out_file, OutFile::Path { path: None, .. }) {
+        out_file = OutFile::StdOut;
+    }
+    let using_stdout = matches!(out_file, OutFile::StdOut);
+    let json = matches.get_flag("json");
+    if using_stdout && json {
+        error!("Cannot use --json when writing to stdout.");
+        return ExitCode::FAILURE;
+    }
+
     let files = if using_stdin {
-        if out_dir.is_some() {
-            error!("Cannot use --dir when reading from stdin.");
-            return ExitCode::FAILURE;
-        }
-        if matches!(out_file, OutFile::Path { path: None, .. }) {
-            out_file = OutFile::StdOut;
-        }
-        vec![(InFile::StdIn, out_file.clone())]
+        vec![(InFile::StdIn, out_file)]
     } else {
         collect_files(
             inputs,
@@ -71,7 +80,7 @@ fn main() -> ExitCode {
     };
 
     let is_verbose = matches.get_count("verbose") > 0;
-    let print_summary = !matches.get_flag("quiet") && !matches!(out_file, OutFile::StdOut);
+    let print_summary = !matches.get_flag("quiet") && !using_stdout;
     let print_progress = print_summary && !is_verbose && stdout().is_terminal();
     let total_files = files.len();
     let num_processed = AtomicUsize::new(0);
@@ -79,9 +88,9 @@ fn main() -> ExitCode {
         print!("Files processed: 0/{}...", total_files);
         stdout().flush().ok();
     }
-    let process = |(input, output): (InFile, OutFile)| {
-        let result = process_file(&input, &output, &opts);
-        if print_progress && matches!(result, OptimizationResult::Ok(_, _)) {
+    let process = |(input, output): &(InFile, OutFile)| {
+        let result = process_file(input, output, &opts);
+        if print_progress && matches!(result, OptimizationResult::Ok(_)) {
             let value = num_processed.fetch_add(1, AcqRel) + 1;
             print!("\rFiles processed: {}/{}...", value, total_files);
             stdout().flush().ok();
@@ -89,9 +98,9 @@ fn main() -> ExitCode {
         result
     };
     let results: Vec<OptimizationResult> = if matches.get_flag("parallel-files") {
-        files.into_par_iter().map(process).collect()
+        files.par_iter().map(process).collect()
     } else {
-        files.into_iter().map(process).collect()
+        files.iter().map(process).collect()
     };
 
     // Collect stats
@@ -100,23 +109,25 @@ fn main() -> ExitCode {
     let mut num_failed = 0;
     let mut total_in: i64 = 0;
     let mut total_out: i64 = 0;
-    for result in results {
+    for result in &results {
         match result {
-            OptimizationResult::Ok(insize, outsize) => {
+            Ok((insize, outsize)) => {
                 num_succeeded += 1;
-                total_in += insize as i64;
-                total_out += outsize as i64;
+                total_in += *insize as i64;
+                total_out += *outsize as i64;
                 if !opts.force && insize == outsize {
                     num_not_optimized += 1;
                 }
             }
-            OptimizationResult::Failed => num_failed += 1,
-            OptimizationResult::Skipped => {}
+            Err(PngError::C2PAMetadataPreventsChanges | PngError::InflatedDataTooLong(_)) => {}
+            Err(_) => num_failed += 1,
         }
     }
 
-    // Print summary
-    if print_summary {
+    // Print results
+    if json {
+        json_output(&files, &results);
+    } else if print_summary {
         let in_bytes = format_bytes(total_in, true);
         let out_bytes = format_bytes(total_out, true);
         let saved = total_in - total_out;
@@ -143,6 +154,13 @@ fn main() -> ExitCode {
         }
     }
 
+    // For optimizing single files, this will return the correct exit code always.
+    // For recursive optimization, the correct choice is a bit subjective.
+    // We're choosing to return a 0 exit code if ANY file in the set
+    // runs correctly.
+    // The reason for this is that recursion may pick up files that are not
+    // PNG files, and return an error for them.
+    // We don't really want to return an error code for those files.
     if num_succeeded > 0 {
         ExitCode::SUCCESS
     } else if num_failed > 0 {
@@ -150,13 +168,6 @@ fn main() -> ExitCode {
     } else {
         ExitCode::from(3)
     }
-}
-
-#[derive(Eq, PartialEq, Ord, PartialOrd)]
-enum OptimizationResult {
-    Ok(usize, usize),
-    Failed,
-    Skipped,
 }
 
 fn collect_files(
@@ -506,28 +517,91 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
     if let (Some(max_size), InFile::Path(path)) = (opts.max_decompressed_size, input) {
         if path.metadata().is_ok_and(|m| m.len() > max_size as u64) {
             warn!("{input}: Skipped: File exceeds the maximum size ({max_size} bytes)");
-            return OptimizationResult::Skipped;
+            return Err(PngError::InflatedDataTooLong(max_size));
         }
     }
 
-    match oxipng::optimize(input, output, opts) {
-        // For optimizing single files, this will return the correct exit code always.
-        // For recursive optimization, the correct choice is a bit subjective.
-        // We're choosing to return a 0 exit code if ANY file in the set
-        // runs correctly.
-        // The reason for this is that recursion may pick up files that are not
-        // PNG files, and return an error for them.
-        // We don't really want to return an error code for those files.
-        Ok((insize, outsize)) => OptimizationResult::Ok(insize, outsize),
+    let result = oxipng::optimize(input, output, opts);
+    match &result {
+        Ok(_) => {}
         Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
             warn!("{input}: Skipped: {e}");
-            OptimizationResult::Skipped
         }
         Err(e) => {
             error!("{input}: {e}");
-            OptimizationResult::Failed
         }
     }
+    result
+}
+
+/// Write optimization results as json.
+/// ```
+/// {
+///   "results": [
+///     {
+///       "input": string,
+///       "status": "success",
+///       "output": string|null,
+///       "insize": number,
+///       "outsize": number
+///     },
+///     {
+///       "input": string,
+///       "status": "error",
+///       "error": string
+///     }
+///   ]
+/// }
+/// ```
+fn json_output(files: &[(InFile, OutFile)], results: &[OptimizationResult]) {
+    print!(r#"{{"results":["#);
+    let mut first = true;
+    results
+        .iter()
+        .zip(files)
+        .for_each(|(result, (input, output))| {
+            if !first {
+                print!(",");
+            }
+            print!(r#"{{"input":"{}","#, json_escape(&input.to_string()));
+            match result {
+                Ok((insize, outsize)) => {
+                    let outpath = match output {
+                        OutFile::None => "null".to_owned(),
+                        OutFile::Path { path: None, .. } => {
+                            format!(r#""{}""#, json_escape(&input.to_string()))
+                        }
+                        OutFile::Path { path: Some(p), .. } => {
+                            format!(r#""{}""#, json_escape(&p.display().to_string()))
+                        }
+                        OutFile::StdOut => unreachable!(),
+                    };
+                    print!(
+                        r#""status":"success","output":{},"insize":{},"outsize":{}}}"#,
+                        outpath, insize, outsize
+                    );
+                }
+                Err(e) => {
+                    print!(
+                        r#""status":"error","error":"{}"}}"#,
+                        json_escape(&e.to_string())
+                    );
+                }
+            }
+            first = false;
+        });
+    print!("]}}");
+}
+
+fn json_escape(string: &str) -> String {
+    string
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\t", "\\t")
+        .replace("\r", "\\r")
+        .replace("\x08", "\\b")
+        .replace("\x0c", "\\f")
 }
 
 /// Format byte counts as IEC units to 3 significant figures.
