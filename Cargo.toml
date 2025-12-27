@@ -79,6 +79,9 @@ default-features = false
 features = ["png"]
 version = "0.25.9"
 
+[dev-dependencies]
+serde_json = "1.0.147"
+
 [features]
 binary = ["dep:clap", "dep:glob", "dep:env_logger", "dep:parse-size"]
 default = ["binary", "parallel", "zopfli"]
