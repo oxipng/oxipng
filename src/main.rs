@@ -58,7 +58,7 @@ fn main() -> ExitCode {
         if matches!(out_file, OutFile::Path { path: None, .. }) {
             out_file = OutFile::StdOut;
         }
-        vec![(InFile::StdIn, out_file)]
+        vec![(InFile::StdIn, out_file.clone())]
     } else {
         collect_files(
             inputs,
@@ -70,28 +70,76 @@ fn main() -> ExitCode {
     };
 
     let parallel_files = matches.get_flag("parallel-files");
-    let summary = if parallel_files {
+    let results: Vec<OptimizationResult> = if parallel_files {
         files
             .into_par_iter()
             .map(|(input, output)| process_file(&input, &output, &opts))
-            .min()
+            .collect()
     } else {
         files
             .into_iter()
             .map(|(input, output)| process_file(&input, &output, &opts))
-            .min()
+            .collect()
     };
 
-    match summary.unwrap_or(OptimizationResult::Skipped) {
-        OptimizationResult::Ok => ExitCode::SUCCESS,
-        OptimizationResult::Failed => ExitCode::FAILURE,
-        OptimizationResult::Skipped => ExitCode::from(3),
+    // Collect stats
+    let mut num_succeeded = 0;
+    let mut num_not_optimized = 0;
+    let mut num_failed = 0;
+    let mut total_in: i64 = 0;
+    let mut total_out: i64 = 0;
+    for result in results {
+        match result {
+            OptimizationResult::Ok(insize, outsize) => {
+                num_succeeded += 1;
+                total_in += insize as i64;
+                total_out += outsize as i64;
+                if !opts.force && insize == outsize {
+                    num_not_optimized += 1;
+                }
+            }
+            OptimizationResult::Failed => num_failed += 1,
+            OptimizationResult::Skipped => {}
+        }
+    }
+
+    // Print summary
+    if !matches.get_flag("quiet") && !matches!(out_file, OutFile::StdOut) {
+        let in_bytes = format_bytes(total_in, true);
+        let out_bytes = format_bytes(total_out, true);
+        let saved = total_in - total_out;
+        let saved_bytes = format_bytes(saved, false);
+        let percent = if total_in > 0 {
+            saved as f64 / total_in as f64 * 100_f64
+        } else {
+            0_f64
+        };
+        println!("Files processed: {num_succeeded}");
+        println!("Input size: {}", in_bytes);
+        println!("Output size: {}", out_bytes);
+        println!("Total saved: {} ({:.2}%)", saved_bytes, percent);
+        if num_not_optimized == 1 {
+            println!("({num_not_optimized} file could not be optimized further)");
+        } else if num_not_optimized > 0 {
+            println!("({num_not_optimized} files could not be optimized further)");
+        }
+        if matches.get_flag("dry-run") {
+            println!("Dry run, no changes saved");
+        }
+    }
+
+    if num_succeeded > 0 {
+        ExitCode::SUCCESS
+    } else if num_failed > 0 {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::from(3)
     }
 }
 
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
 enum OptimizationResult {
-    Ok,
+    Ok(usize, usize),
     Failed,
     Skipped,
 }
@@ -166,8 +214,9 @@ fn parse_opts_into_struct(
 ) -> Result<(OutFile, Option<PathBuf>, Options), String> {
     let log_level = match matches.get_count("verbose") {
         _ if matches.get_flag("quiet") => LevelFilter::Off,
-        0 => LevelFilter::Info,
-        1 => LevelFilter::Debug,
+        0 => LevelFilter::Warn,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Debug,
         _ => LevelFilter::Trace,
     };
     env_logger::builder()
@@ -453,7 +502,7 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
         // The reason for this is that recursion may pick up files that are not
         // PNG files, and return an error for them.
         // We don't really want to return an error code for those files.
-        Ok(_) => OptimizationResult::Ok,
+        Ok((insize, outsize)) => OptimizationResult::Ok(insize, outsize),
         Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
             warn!("{input}: Skipped: {e}");
             OptimizationResult::Skipped
@@ -462,5 +511,44 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
             error!("{input}: {e}");
             OptimizationResult::Failed
         }
+    }
+}
+
+/// Format byte counts as IEC units to 3 significant figures.
+fn format_bytes(count: i64, include_raw: bool) -> String {
+    const K: i64 = 1 << 10;
+    const M: i64 = 1 << 20;
+    const G: i64 = 1 << 30;
+    fn format_3sf(value: f64) -> String {
+        match value.abs() {
+            ..9.995 => format!("{:.2}", value),
+            9.995..99.95 => format!("{:.1}", value),
+            _ => format!("{:.0}", value),
+        }
+    }
+    let formatted = match count.abs() {
+        ..K => format!("{} bytes", count),
+        K..M => format!("{} KiB", format_3sf(count as f64 / K as f64)),
+        M..G => format!("{} MiB", format_3sf(count as f64 / M as f64)),
+        _ => format!("{} GiB", format_3sf(count as f64 / G as f64)),
+    };
+    if include_raw && count.abs() >= K {
+        format!("{} ({} bytes)", formatted, count)
+    } else {
+        formatted
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_bytes;
+
+    #[test]
+    fn test_format_bytes() {
+        assert_eq!(format_bytes(1023, false), "1023 bytes");
+        assert_eq!(format_bytes(800_000, false), "781 KiB");
+        assert_eq!(format_bytes(12_500_000, false), "11.9 MiB");
+        assert_eq!(format_bytes(2_000_000_000, false), "1.86 GiB");
+        assert_eq!(format_bytes(-1024, false), "-1.00 KiB");
     }
 }
