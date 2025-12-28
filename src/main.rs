@@ -35,7 +35,7 @@ fn main() -> ExitCode {
         .after_long_help("")
         .get_matches_from(std::env::args());
 
-    let (out_file, out_dir, opts) = match parse_opts_into_struct(&matches) {
+    let (mut out_file, out_dir, opts) = match parse_opts_into_struct(&matches) {
         Ok(x) => x,
         Err(x) => {
             error!("{x}");
@@ -43,25 +43,31 @@ fn main() -> ExitCode {
         }
     };
 
-    let files = collect_files(
-        #[cfg(windows)]
-        matches
-            .get_many::<PathBuf>("files")
-            .unwrap()
-            .cloned()
-            .flat_map(apply_glob_pattern)
-            .collect(),
-        #[cfg(not(windows))]
-        matches
-            .get_many::<PathBuf>("files")
-            .unwrap()
-            .cloned()
-            .collect(),
-        &out_dir,
-        &out_file,
-        matches.get_flag("recursive"),
-        true,
-    );
+    // Determine input and output
+    let file_args = matches.get_many::<PathBuf>("files").unwrap().cloned();
+    #[cfg(windows)]
+    let inputs: Vec<_> = file_args.flat_map(apply_glob_pattern).collect();
+    #[cfg(not(windows))]
+    let inputs: Vec<_> = file_args.collect();
+    let using_stdin = inputs.len() == 1 && inputs[0].to_str() == Some("-");
+    let files = if using_stdin {
+        if out_dir.is_some() {
+            error!("Cannot use --dir when reading from stdin.");
+            return ExitCode::FAILURE;
+        }
+        if matches!(out_file, OutFile::Path { path: None, .. }) {
+            out_file = OutFile::StdOut;
+        }
+        vec![(InFile::StdIn, out_file)]
+    } else {
+        collect_files(
+            inputs,
+            &out_dir,
+            &out_file,
+            matches.get_flag("recursive"),
+            true,
+        )
+    };
 
     let parallel_files = matches.get_flag("parallel-files");
     let summary = if parallel_files {
@@ -98,10 +104,8 @@ fn collect_files(
     top_level: bool, //explicitly specify files
 ) -> Vec<(InFile, OutFile)> {
     let mut in_out_pairs = Vec::new();
-    let allow_stdin = top_level && files.len() == 1;
     for input in files {
-        let using_stdin = allow_stdin && input.to_str() == Some("-");
-        if !using_stdin && input.is_dir() {
+        if input.is_dir() {
             if recursive {
                 match input.read_dir() {
                     Ok(dir) => {
@@ -118,6 +122,15 @@ fn collect_files(
             }
             continue;
         }
+
+        // Skip non png files if not given on top level
+        if !top_level && {
+            let extension = input.extension().map(OsStr::to_ascii_lowercase);
+            extension != Some(OsString::from("png")) && extension != Some(OsString::from("apng"))
+        } {
+            continue;
+        }
+
         let out_file =
             if let (Some(out_dir), &OutFile::Path { preserve_attrs, .. }) = (out_dir, out_file) {
                 let path = Some(out_dir.join(input.file_name().unwrap()));
@@ -128,19 +141,7 @@ fn collect_files(
             } else {
                 (*out_file).clone()
             };
-        let in_file = if using_stdin {
-            InFile::StdIn
-        } else {
-            // Skip non png files if not given on top level
-            if !top_level && {
-                let extension = input.extension().map(OsStr::to_ascii_lowercase);
-                extension != Some(OsString::from("png"))
-                    && extension != Some(OsString::from("apng"))
-            } {
-                continue;
-            }
-            InFile::Path(input)
-        };
+        let in_file = InFile::Path(input);
         in_out_pairs.push((in_file, out_file));
     }
     in_out_pairs
