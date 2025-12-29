@@ -430,12 +430,9 @@ fn interlaced_0_to_1_other_filter_mode() {
 fn preserve_attrs() {
     let input = PathBuf::from("tests/files/preserve_attrs.png");
 
-    #[cfg(feature = "filetime")]
     let meta_input = input
         .metadata()
-        .expect("unable to get file metadata for output file");
-    #[cfg(feature = "filetime")]
-    let mtime_canon = filetime::FileTime::from_last_modification_time(&meta_input);
+        .expect("unable to get metadata for input file");
 
     let (mut output, opts) = get_opts(&input);
     if let OutFile::Path { preserve_attrs, .. } = &mut output {
@@ -449,17 +446,6 @@ fn preserve_attrs() {
     let output = output.path().unwrap();
     assert!(output.exists());
 
-    #[cfg(feature = "filetime")]
-    let meta_output = output
-        .metadata()
-        .expect("unable to get file metadata for output file");
-    #[cfg(feature = "filetime")]
-    assert_eq!(
-        &mtime_canon,
-        &filetime::FileTime::from_last_modification_time(&meta_output),
-        "expected modification time to be identical to that of input",
-    );
-
     match PngData::new(output, &opts) {
         Ok(x) => x,
         Err(x) => {
@@ -468,9 +454,21 @@ fn preserve_attrs() {
         }
     };
 
-    remove_file(output).ok();
+    let meta_output = output
+        .metadata()
+        .expect("unable to get metadata for output file");
+    assert_eq!(
+        meta_input.modified().ok(),
+        meta_output.modified().ok(),
+        "expected modification time to be identical to that of input",
+    );
+    assert_eq!(
+        meta_input.permissions(),
+        meta_output.permissions(),
+        "expected permissions to be identical to that of input",
+    );
 
-    // TODO: Actually check permissions
+    remove_file(output).ok();
 }
 
 #[test]
