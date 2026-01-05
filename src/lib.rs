@@ -252,6 +252,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
             buffer
                 .write_all(&optimized_output)
                 .map_err(|e| PngError::WriteFailed("stdout".into(), e))?;
+            info!("{savings}: stdout");
         }
         (OutFile::Path { path, .. }, _) => {
             let output_path = path
