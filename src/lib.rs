@@ -220,7 +220,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
             (OutFile::Path { path, .. }, InFile::Path(input_path))
                 if path.as_ref().is_none_or(|p| p == input_path) =>
             {
-                info!("{input}: Could not optimize further, no change written");
+                info!("Could not optimize further, no change written: {input}");
                 return Ok((in_length, in_length));
             }
             _ => {
