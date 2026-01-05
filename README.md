@@ -78,6 +78,13 @@ are almost always better or equal to lower levels, this is not guaranteed and it
 rare circumstances that a lower level may give a marginally smaller output. Similarly, using Zopfli
 compression (`-z`) is not guaranteed to always be better than without.
 
+## APNG support
+
+Oxipng currently only supports limited optimization of animated PNGs (APNGs). It can perform
+alpha-optimization, refiltering and recompression of all frames, but all transformations will be
+disabled. For best results, it is recommended to use another tool such as
+[apngopt](https://sourceforge.net/projects/apng/files/APNG_Optimizer/) prior to running Oxipng.
+
 ## Git integration via [pre-commit]
 
 Create a `.pre-commit-config.yaml` file like this, or add the lines after the `repos` map
