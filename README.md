@@ -161,39 +161,3 @@ Other contributions (such as improving documentation or translations) are also w
 ## License
 
 Oxipng is open-source software, distributed under the MIT license.
-
-## Benchmarks
-
-Tested Oxipng 9.0.0 (commit `c16519b38b0519988db625913be919d4f0e42f5d`, compiled
-on `rustc 1.74.0-nightly (7b4d9e155 2023-09-28)`) against OptiPNG version 0.7.7,
-as packaged by Debian unstable, on a Linux 6.5.0-2-amd64 kernel, Intel Core
-i7-12700 CPU (8 performance cores, 4 efficiency cores, 20 threads), DDR5-5200
-RAM in dual channel configuration.
-
-```
-
-Benchmark 1: ./target/release/oxipng -P ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):      59.6 ms ±   7.7 ms    [User: 77.4 ms, System: 3.6 ms]
-  Range (min … max):    53.3 ms …  89.9 ms    32 runs
-
-Benchmark 2: optipng -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):     132.4 ms ±   0.8 ms    [User: 132.5 ms, System: 0.6 ms]
-  Range (min … max):   131.8 ms … 134.4 ms    22 runs
-
-Summary
-  ./target/release/oxipng -P ./tests/files/rgb_16_should_be_grayscale_8.png ran
-    2.22 ± 0.29 times faster than optipng -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-
-Benchmark 1: ./target/release/oxipng -o4 -P ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):      88.7 ms ±   4.3 ms    [User: 270.3 ms, System: 11.0 ms]
-  Range (min … max):    86.8 ms … 109.4 ms    26 runs
-
-Benchmark 2: optipng -o 4 -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):     444.9 ms ±   0.3 ms    [User: 444.8 ms, System: 0.7 ms]
-  Range (min … max):   444.4 ms … 445.6 ms    10 runs
-
-Summary
-  ./target/release/oxipng -o4 -P ./tests/files/rgb_16_should_be_grayscale_8.png ran
-    5.01 ± 0.25 times faster than optipng -o 4 -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-
-```
