@@ -66,7 +66,7 @@ version = "1.11.0"
 
 [dependencies.clap]
 optional = true
-version = "4.5.53"
+version = "4.5.54"
 features = ["wrap_help"]
 
 [dependencies.parse-size]
