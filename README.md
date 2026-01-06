@@ -138,17 +138,13 @@ and specifying the desired ones, for example:
 
 ## History
 
-Oxipng began as a complete rewrite of the OptiPNG project,
-which was assumed to be dead as no commit had been made to it since March 2014.
-(OptiPNG has since released a new version, after Oxipng was first released.)
-The name has been changed to avoid confusion and potential legal issues.
-
-The core goal of rewriting OptiPNG was to implement multithreading,
-which would be very difficult to do within the existing C codebase of OptiPNG.
+Oxipng began in 2015 as a rewrite of the OptiPNG project. The core goal was to implement
+multithreading, which would have been very difficult to do within the existing C codebase of OptiPNG.
 This also served as an opportunity to choose a more modern, safer language (Rust).
 
-Note that, while similar, Oxipng is not a drop-in replacement for OptiPNG.
-If you are migrating from OptiPNG, please check the [help](MANUAL.txt) before using.
+However, Oxipng has evolved considerably since then. While some of the options remain similar to
+OptiPNG, the architecture and capabilities are now quite different. It is not a drop-in
+replacement - if you are migrating from OptiPNG, please check the [help](MANUAL.txt) before using.
 
 ## Contributing
 
