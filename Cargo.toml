@@ -56,10 +56,6 @@ version = "0.11.8"
 optional = true
 version = "0.5.15"
 
-[dependencies.filetime]
-optional = true
-version = "0.2.26"
-
 [dependencies.rayon]
 optional = true
 version = "1.11.0"
@@ -85,12 +81,11 @@ version = "0.25.9"
 
 [features]
 binary = ["dep:clap", "dep:glob", "dep:env_logger", "dep:parse-size"]
-default = ["binary", "parallel", "zopfli", "filetime"]
+default = ["binary", "parallel", "zopfli"]
 parallel = ["dep:rayon", "indexmap/rayon", "dep:crossbeam-channel"]
 freestanding = ["libdeflater/freestanding"]
 sanity-checks = ["dep:image"]
 zopfli = ["dep:zopfli"]
-filetime = ["dep:filetime"]
 system-libdeflate = ["libdeflater/dynamic"]
 
 [lib]

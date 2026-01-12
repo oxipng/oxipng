@@ -7,9 +7,9 @@ extern crate rayon;
 mod rayon;
 
 use std::{
-    fs::{File, Metadata},
+    fs::File,
     io::{BufWriter, Read, Write, stdin, stdout},
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -171,34 +171,9 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
 
     let deadline = Arc::new(Deadline::new(opts.timeout));
 
-    // grab metadata before even opening input file to preserve atime
-    let opt_metadata_preserved;
     let in_data = match *input {
-        InFile::Path(ref input_path) => {
-            if matches!(
-                output,
-                OutFile::Path {
-                    preserve_attrs: true,
-                    ..
-                }
-            ) {
-                opt_metadata_preserved = input_path
-                    .metadata()
-                    .map_err(|err| {
-                        // Fail if metadata cannot be preserved
-                        PngError::new(&format!(
-                            "Unable to read metadata from input file {input_path:?}: {err}"
-                        ))
-                    })
-                    .map(Some)?;
-                trace!("preserving metadata: {opt_metadata_preserved:?}");
-            } else {
-                opt_metadata_preserved = None;
-            }
-            PngData::read_file(input_path)?
-        }
+        InFile::Path(ref input_path) => PngData::read_file(input_path)?,
         InFile::StdIn => {
-            opt_metadata_preserved = None;
             let mut data = Vec::new();
             stdin()
                 .read_to_end(&mut data)
@@ -253,17 +228,32 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
                 .write_all(&optimized_output)
                 .map_err(|e| PngError::WriteFailed("stdout".into(), e))?;
         }
-        (OutFile::Path { path, .. }, _) => {
+        (
+            OutFile::Path {
+                path,
+                preserve_attrs,
+            },
+            _,
+        ) => {
+            let input_metadata = if *preserve_attrs {
+                input.path().and_then(|in_path| {
+                    let meta = in_path.metadata();
+                    if let Err(e) = &meta {
+                        warn!("Unable to read metadata from {in_path:?}: {e}");
+                    }
+                    meta.ok()
+                })
+            } else {
+                None
+            };
+
             let output_path = path
                 .as_ref()
                 .map_or_else(|| input.path().unwrap(), PathBuf::as_path);
             let out_file = File::create(output_path)
                 .map_err(|err| PngError::WriteFailed(output_path.display().to_string(), err))?;
-            if let Some(metadata_input) = &opt_metadata_preserved {
-                copy_permissions(metadata_input, &out_file)?;
-            }
 
-            let mut buffer = BufWriter::new(out_file);
+            let mut buffer = BufWriter::new(&out_file);
             buffer
                 .write_all(&optimized_output)
                 // flush BufWriter so IO errors don't get swallowed silently on close() by drop!
@@ -271,8 +261,18 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(
                 .map_err(|e| PngError::WriteFailed(output_path.display().to_string(), e))?;
             // force drop and thereby closing of file handle before modifying any timestamp
             std::mem::drop(buffer);
-            if let Some(metadata_input) = &opt_metadata_preserved {
-                copy_times(metadata_input, output_path)?;
+
+            if let Some(metadata_input) = &input_metadata {
+                let set_time = metadata_input
+                    .modified()
+                    .and_then(|m| out_file.set_modified(m));
+                if let Err(e) = set_time {
+                    warn!("Unable to set modification time on {output_path:?}: {e}");
+                }
+                let set_perm = out_file.set_permissions(metadata_input.permissions());
+                if let Err(e) = set_perm {
+                    warn!("Unable to set permissions on {output_path:?}: {e}");
+                }
             }
             info!("{}: {}", savings, output_path.display());
         }
@@ -641,30 +641,4 @@ fn recompress_frames(
 /// Check if an image was already optimized prior to oxipng's operations
 const fn is_fully_optimized(original_size: usize, optimized_size: usize, opts: &Options) -> bool {
     original_size <= optimized_size && !opts.force
-}
-
-fn copy_permissions(metadata_input: &Metadata, out_file: &File) -> PngResult<()> {
-    out_file
-        .set_permissions(metadata_input.permissions())
-        .map_err(|err_io| {
-            PngError::new(&format!(
-                "Unable to set permissions for output file: {err_io}"
-            ))
-        })
-}
-
-#[cfg(not(feature = "filetime"))]
-const fn copy_times(_: &Metadata, _: &Path) -> PngResult<()> {
-    Ok(())
-}
-
-#[cfg(feature = "filetime")]
-fn copy_times(input_path_meta: &Metadata, out_path: &Path) -> PngResult<()> {
-    let mtime = filetime::FileTime::from_last_modification_time(input_path_meta);
-    trace!("attempting to set file modification time: {mtime:?}");
-    filetime::set_file_mtime(out_path, mtime).map_err(|err_io| {
-        PngError::new(&format!(
-            "Unable to set file times on {out_path:?}: {err_io}"
-        ))
-    })
 }
