@@ -6,9 +6,10 @@ use std::num::NonZeroU64;
 use std::{
     ffi::{OsStr, OsString},
     fs::DirBuilder,
-    io::Write,
+    io::{IsTerminal, Write, stdout},
     path::PathBuf,
     process::ExitCode,
+    sync::atomic::{AtomicUsize, Ordering::AcqRel},
     time::Duration,
 };
 
@@ -69,17 +70,28 @@ fn main() -> ExitCode {
         )
     };
 
-    let parallel_files = matches.get_flag("parallel-files");
-    let results: Vec<OptimizationResult> = if parallel_files {
-        files
-            .into_par_iter()
-            .map(|(input, output)| process_file(&input, &output, &opts))
-            .collect()
+    let is_verbose = matches.get_count("verbose") > 0;
+    let print_summary = !matches.get_flag("quiet") && !matches!(out_file, OutFile::StdOut);
+    let print_progress = print_summary && !is_verbose && stdout().is_terminal();
+    let total_files = files.len();
+    let num_processed = AtomicUsize::new(0);
+    if print_progress {
+        print!("Files processed: 0/{}...", total_files);
+        stdout().flush().ok();
+    }
+    let process = |(input, output): (InFile, OutFile)| {
+        let result = process_file(&input, &output, &opts);
+        if print_progress && matches!(result, OptimizationResult::Ok(_, _)) {
+            let value = num_processed.fetch_add(1, AcqRel) + 1;
+            print!("\rFiles processed: {}/{}...", value, total_files);
+            stdout().flush().ok();
+        }
+        result
+    };
+    let results: Vec<OptimizationResult> = if matches.get_flag("parallel-files") {
+        files.into_par_iter().map(process).collect()
     } else {
-        files
-            .into_iter()
-            .map(|(input, output)| process_file(&input, &output, &opts))
-            .collect()
+        files.into_iter().map(process).collect()
     };
 
     // Collect stats
@@ -104,7 +116,7 @@ fn main() -> ExitCode {
     }
 
     // Print summary
-    if !matches.get_flag("quiet") && !matches!(out_file, OutFile::StdOut) {
+    if print_summary {
         let in_bytes = format_bytes(total_in, true);
         let out_bytes = format_bytes(total_out, true);
         let saved = total_in - total_out;
@@ -114,7 +126,10 @@ fn main() -> ExitCode {
         } else {
             0_f64
         };
-        println!("Files processed: {num_succeeded}");
+        if is_verbose {
+            println!("--------------------");
+        }
+        println!("\rFiles processed: {num_succeeded}/{total_files}   ");
         println!("Input size: {}", in_bytes);
         println!("Output size: {}", out_bytes);
         println!("Total saved: {} ({:.2}%)", saved_bytes, percent);
@@ -225,7 +240,8 @@ fn parse_opts_into_struct(
             match record.level() {
                 Level::Error | Level::Warn => {
                     let style = buf.default_level_style(record.level());
-                    writeln!(buf, "{style}{}{style:#}", record.args())
+                    // Prepend carriage return to clear progress line
+                    writeln!(buf, "\r{style}{}{style:#}", record.args())
                 }
                 // Leave info, debug and trace unstyled
                 _ => writeln!(buf, "{}", record.args()),
