@@ -6,9 +6,10 @@ use std::num::NonZeroU64;
 use std::{
     ffi::{OsStr, OsString},
     fs::DirBuilder,
-    io::Write,
+    io::{IsTerminal, Write, stdout},
     path::PathBuf,
     process::ExitCode,
+    sync::atomic::{AtomicUsize, Ordering::AcqRel},
     time::Duration,
 };
 
@@ -35,7 +36,7 @@ fn main() -> ExitCode {
         .after_long_help("")
         .get_matches_from(std::env::args());
 
-    let (out_file, out_dir, opts) = match parse_opts_into_struct(&matches) {
+    let (mut out_file, out_dir, opts) = match parse_opts_into_struct(&matches) {
         Ok(x) => x,
         Err(x) => {
             error!("{x}");
@@ -43,49 +44,117 @@ fn main() -> ExitCode {
         }
     };
 
-    let files = collect_files(
-        #[cfg(windows)]
-        matches
-            .get_many::<PathBuf>("files")
-            .unwrap()
-            .cloned()
-            .flat_map(apply_glob_pattern)
-            .collect(),
-        #[cfg(not(windows))]
-        matches
-            .get_many::<PathBuf>("files")
-            .unwrap()
-            .cloned()
-            .collect(),
-        &out_dir,
-        &out_file,
-        matches.get_flag("recursive"),
-        true,
-    );
-
-    let parallel_files = matches.get_flag("parallel-files");
-    let summary = if parallel_files {
-        files
-            .into_par_iter()
-            .map(|(input, output)| process_file(&input, &output, &opts))
-            .min()
+    // Determine input and output
+    let file_args = matches.get_many::<PathBuf>("files").unwrap().cloned();
+    #[cfg(windows)]
+    let inputs: Vec<_> = file_args.flat_map(apply_glob_pattern).collect();
+    #[cfg(not(windows))]
+    let inputs: Vec<_> = file_args.collect();
+    let using_stdin = inputs.len() == 1 && inputs[0].to_str() == Some("-");
+    let files = if using_stdin {
+        if out_dir.is_some() {
+            error!("Cannot use --dir when reading from stdin.");
+            return ExitCode::FAILURE;
+        }
+        if matches!(out_file, OutFile::Path { path: None, .. }) {
+            out_file = OutFile::StdOut;
+        }
+        vec![(InFile::StdIn, out_file.clone())]
     } else {
-        files
-            .into_iter()
-            .map(|(input, output)| process_file(&input, &output, &opts))
-            .min()
+        collect_files(
+            inputs,
+            &out_dir,
+            &out_file,
+            matches.get_flag("recursive"),
+            true,
+        )
     };
 
-    match summary.unwrap_or(OptimizationResult::Skipped) {
-        OptimizationResult::Ok => ExitCode::SUCCESS,
-        OptimizationResult::Failed => ExitCode::FAILURE,
-        OptimizationResult::Skipped => ExitCode::from(3),
+    let is_verbose = matches.get_count("verbose") > 0;
+    let print_summary = !matches.get_flag("quiet") && !matches!(out_file, OutFile::StdOut);
+    let print_progress = print_summary && !is_verbose && stdout().is_terminal();
+    let total_files = files.len();
+    let num_processed = AtomicUsize::new(0);
+    if print_progress {
+        print!("Files processed: 0/{}...", total_files);
+        stdout().flush().ok();
+    }
+    let process = |(input, output): (InFile, OutFile)| {
+        let result = process_file(&input, &output, &opts);
+        if print_progress && matches!(result, OptimizationResult::Ok(_, _)) {
+            let value = num_processed.fetch_add(1, AcqRel) + 1;
+            print!("\rFiles processed: {}/{}...", value, total_files);
+            stdout().flush().ok();
+        }
+        result
+    };
+    let results: Vec<OptimizationResult> = if matches.get_flag("parallel-files") {
+        files.into_par_iter().map(process).collect()
+    } else {
+        files.into_iter().map(process).collect()
+    };
+
+    // Collect stats
+    let mut num_succeeded = 0;
+    let mut num_not_optimized = 0;
+    let mut num_failed = 0;
+    let mut total_in: i64 = 0;
+    let mut total_out: i64 = 0;
+    for result in results {
+        match result {
+            OptimizationResult::Ok(insize, outsize) => {
+                num_succeeded += 1;
+                total_in += insize as i64;
+                total_out += outsize as i64;
+                if !opts.force && insize == outsize {
+                    num_not_optimized += 1;
+                }
+            }
+            OptimizationResult::Failed => num_failed += 1,
+            OptimizationResult::Skipped => {}
+        }
+    }
+
+    // Print summary
+    if print_summary {
+        let in_bytes = format_bytes(total_in, true);
+        let out_bytes = format_bytes(total_out, true);
+        let saved = total_in - total_out;
+        let saved_bytes = format_bytes(saved, false);
+        let percent = if total_in > 0 {
+            saved as f64 / total_in as f64 * 100_f64
+        } else {
+            0_f64
+        };
+        if is_verbose {
+            println!("--------------------");
+        }
+        println!("\rFiles processed: {num_succeeded}/{total_files}   ");
+        println!("Input size: {}", in_bytes);
+        println!("Output size: {}", out_bytes);
+        println!("Total saved: {} ({:.2}%)", saved_bytes, percent);
+        if num_not_optimized == 1 {
+            println!("({num_not_optimized} file could not be optimized further)");
+        } else if num_not_optimized > 0 {
+            println!("({num_not_optimized} files could not be optimized further)");
+        }
+        if matches.get_flag("dry-run") {
+            println!("Dry run, no changes saved");
+        }
+    }
+
+    if num_succeeded > 0 {
+        ExitCode::SUCCESS
+    } else if num_failed > 0 {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::from(3)
     }
 }
 
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
 enum OptimizationResult {
-    Ok,
+    Ok(usize, usize),
     Failed,
     Skipped,
 }
@@ -98,10 +167,8 @@ fn collect_files(
     top_level: bool, //explicitly specify files
 ) -> Vec<(InFile, OutFile)> {
     let mut in_out_pairs = Vec::new();
-    let allow_stdin = top_level && files.len() == 1;
     for input in files {
-        let using_stdin = allow_stdin && input.to_str() == Some("-");
-        if !using_stdin && input.is_dir() {
+        if input.is_dir() {
             if recursive {
                 match input.read_dir() {
                     Ok(dir) => {
@@ -118,6 +185,15 @@ fn collect_files(
             }
             continue;
         }
+
+        // Skip non png files if not given on top level
+        if !top_level && {
+            let extension = input.extension().map(OsStr::to_ascii_lowercase);
+            extension != Some(OsString::from("png")) && extension != Some(OsString::from("apng"))
+        } {
+            continue;
+        }
+
         let out_file =
             if let (Some(out_dir), &OutFile::Path { preserve_attrs, .. }) = (out_dir, out_file) {
                 let path = Some(out_dir.join(input.file_name().unwrap()));
@@ -128,19 +204,7 @@ fn collect_files(
             } else {
                 (*out_file).clone()
             };
-        let in_file = if using_stdin {
-            InFile::StdIn
-        } else {
-            // Skip non png files if not given on top level
-            if !top_level && {
-                let extension = input.extension().map(OsStr::to_ascii_lowercase);
-                extension != Some(OsString::from("png"))
-                    && extension != Some(OsString::from("apng"))
-            } {
-                continue;
-            }
-            InFile::Path(input)
-        };
+        let in_file = InFile::Path(input);
         in_out_pairs.push((in_file, out_file));
     }
     in_out_pairs
@@ -165,8 +229,9 @@ fn parse_opts_into_struct(
 ) -> Result<(OutFile, Option<PathBuf>, Options), String> {
     let log_level = match matches.get_count("verbose") {
         _ if matches.get_flag("quiet") => LevelFilter::Off,
-        0 => LevelFilter::Info,
-        1 => LevelFilter::Debug,
+        0 => LevelFilter::Warn,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Debug,
         _ => LevelFilter::Trace,
     };
     env_logger::builder()
@@ -175,7 +240,8 @@ fn parse_opts_into_struct(
             match record.level() {
                 Level::Error | Level::Warn => {
                     let style = buf.default_level_style(record.level());
-                    writeln!(buf, "{style}{}{style:#}", record.args())
+                    // Prepend carriage return to clear progress line
+                    writeln!(buf, "\r{style}{}{style:#}", record.args())
                 }
                 // Leave info, debug and trace unstyled
                 _ => writeln!(buf, "{}", record.args()),
@@ -452,7 +518,7 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
         // The reason for this is that recursion may pick up files that are not
         // PNG files, and return an error for them.
         // We don't really want to return an error code for those files.
-        Ok(_) => OptimizationResult::Ok,
+        Ok((insize, outsize)) => OptimizationResult::Ok(insize, outsize),
         Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
             warn!("{input}: Skipped: {e}");
             OptimizationResult::Skipped
@@ -461,5 +527,44 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
             error!("{input}: {e}");
             OptimizationResult::Failed
         }
+    }
+}
+
+/// Format byte counts as IEC units to 3 significant figures.
+fn format_bytes(count: i64, include_raw: bool) -> String {
+    const K: i64 = 1 << 10;
+    const M: i64 = 1 << 20;
+    const G: i64 = 1 << 30;
+    fn format_3sf(value: f64) -> String {
+        match value.abs() {
+            ..9.995 => format!("{:.2}", value),
+            9.995..99.95 => format!("{:.1}", value),
+            _ => format!("{:.0}", value),
+        }
+    }
+    let formatted = match count.abs() {
+        ..K => format!("{} bytes", count),
+        K..M => format!("{} KiB", format_3sf(count as f64 / K as f64)),
+        M..G => format!("{} MiB", format_3sf(count as f64 / M as f64)),
+        _ => format!("{} GiB", format_3sf(count as f64 / G as f64)),
+    };
+    if include_raw && count.abs() >= K {
+        format!("{} ({} bytes)", formatted, count)
+    } else {
+        formatted
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_bytes;
+
+    #[test]
+    fn test_format_bytes() {
+        assert_eq!(format_bytes(1023, false), "1023 bytes");
+        assert_eq!(format_bytes(800_000, false), "781 KiB");
+        assert_eq!(format_bytes(12_500_000, false), "11.9 MiB");
+        assert_eq!(format_bytes(2_000_000_000, false), "1.86 GiB");
+        assert_eq!(format_bytes(-1024, false), "-1.00 KiB");
     }
 }
