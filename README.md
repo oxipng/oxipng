@@ -157,3 +157,8 @@ Other contributions (such as improving documentation or translations) are also w
 ## License
 
 Oxipng is open-source software, distributed under the MIT license.
+
+## Benchmarks
+
+An independent benchmark conducted by @demetris is linked here with permission:\
+[oxipng and friends: A comparison of PNG optimization tools](https://op111.net/posts/2025/09/png-compression-oxipng-optipng-fileoptimizer-cwebp/)
