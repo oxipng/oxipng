@@ -1,10 +1,12 @@
 use std::{
     fs::remove_file,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use indexmap::indexset;
 use oxipng::{internal_tests::*, *};
+use serde_json::Value;
 
 const GRAY: u8 = 0;
 const RGB: u8 = 2;
@@ -661,4 +663,40 @@ fn zopfli_mode() {
         RGB,
         BitDepth::Eight,
     );
+}
+#[test]
+fn json_success() {
+    let path = "tests/files/json.png";
+    let output = Command::new(env!("CARGO_BIN_EXE_oxipng"))
+        .args(["--json", "--nx", "--nz", path])
+        .output()
+        .expect("Failed to run executable");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let data: Value = serde_json::from_str(&stdout).expect("Failed to parse JSON");
+    let result = &data["results"][0];
+    assert_eq!(result["input"], path);
+    assert_eq!(result["status"], "success");
+    assert_eq!(result["output"], path);
+    assert_eq!(result["insize"], result["outsize"]);
+}
+
+#[test]
+fn json_dry_run() {
+    let path = "tests/files/json.png";
+    let path2 = "tests/files/escape chars \\ \" \n \t \r \x08 \x0c.png";
+    let output = Command::new(env!("CARGO_BIN_EXE_oxipng"))
+        .args(["--json", "--dry-run", path, path2])
+        .output()
+        .expect("Failed to run executable");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let data: Value = serde_json::from_str(&stdout).expect("Failed to parse JSON");
+    let result = &data["results"][0];
+    assert_eq!(result["input"], path);
+    assert_eq!(result["status"], "success");
+    assert_eq!(result["output"], Value::Null);
+    let result2 = &data["results"][1];
+    assert_eq!(result2["input"], path2);
+    assert_eq!(result2["status"], "error");
 }

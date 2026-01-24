@@ -64,6 +64,7 @@ pub mod internal_tests {
 }
 
 pub type PngResult<T> = Result<T, PngError>;
+pub type OptimizationResult = PngResult<(usize, usize)>;
 
 #[derive(Debug)]
 /// A raw image definition which can be used to create an optimized png
@@ -165,7 +166,7 @@ impl RawImage {
 /// Perform optimization on the input file using the options provided
 ///
 /// Returns the original and optimized file sizes
-pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> PngResult<(usize, usize)> {
+pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> OptimizationResult {
     // Read in the file and try to decode as PNG.
     info!("Processing: {input}");
 
