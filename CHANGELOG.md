@@ -1,3 +1,9 @@
+## Version 10.1.0
+
+- [Feature] Add `--json` option for machine-readable output.
+- [Improvement] New default output with file counter and summary. (Use an extra `-v` flag to get the same output as before.)
+- [Bugfix] Fix fast mode sometimes giving suboptimal results for small, indexed images.
+
 ## Version 10.0.0
 
 - [Breaking] CLI: Change short zopfli flag from `-Z` to `-z`.

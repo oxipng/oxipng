@@ -1,4 +1,4 @@
-oxipng 10.0.0
+oxipng 10.1.0
 Losslessly improve compression of PNG files
 
 Usage: oxipng [OPTIONS] <files>...
@@ -105,10 +105,13 @@ Options:
           losslessly.
 
   -v, --verbose...
-          Run in verbose mode (use twice to increase verbosity)
+          Show per-file info (use multiple times for more detail)
 
   -q, --quiet
-          Run in quiet mode
+          Suppress all output messages
+
+  -j, --json
+          Print results as JSON
 
   -f, --filters <list>
           Perform compression trials with each of the given filter types. You can specify a
