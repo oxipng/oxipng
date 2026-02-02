@@ -39,7 +39,7 @@ required-features = ["zopfli"]
 
 [dependencies]
 bitvec = "1.0.1"
-clap = { version = "4.5.53", optional = true, features = ["wrap_help"] }
+clap = { version = "4.5.56", optional = true, features = ["wrap_help"] }
 crossbeam-channel = { version = "0.5.15", optional = true }
 env_logger = { version = "0.11.8", optional = true, default-features = false, features = ["auto-color"] }
 image = { version = "0.25.9", optional = true, default-features = false, features = ["png"] }
