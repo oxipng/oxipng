@@ -395,10 +395,8 @@ fn optimize_raw(
     // 9 is not appreciably better than 8
     // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
     let compression = match opts.deflater {
-        Deflater::Libdeflater { compression } => {
-            if opts.fast_evaluation { 7 } else { 8 }.min(compression)
-        }
-        _ => 8,
+        Deflater::Libdeflater { compression } => 7.min(compression),
+        _ => 7,
     };
     let eval_deflater = Deflater::Libdeflater { compression };
     // If only one filter is selected, use this for evaluations
@@ -414,16 +412,15 @@ fn optimize_raw(
         eval_filters.clone(),
         eval_deflater,
         false,
+        opts.candidate_threshold,
         opts.deflater == eval_deflater,
     );
     let mut new_image = perform_reductions(image.clone(), opts, &deadline, &eval);
-    let eval_result = eval.get_best_candidate();
-    if let Some(ref result) = eval_result {
+    let eval_results = eval.get_best_candidates(opts.max_candidates);
+    if let Some(result) = eval_results.first() {
         new_image = result.image.clone();
     }
-    let reduction_occurred = new_image.ihdr.color_type != image.ihdr.color_type
-        || new_image.ihdr.bit_depth != image.ihdr.bit_depth
-        || new_image.ihdr.interlaced != image.ihdr.interlaced;
+    let reduction_occurred = !new_image.is_same_format(&image);
 
     if reduction_occurred {
         report_format("Transformed image to ", &new_image);
@@ -435,7 +432,7 @@ fn optimize_raw(
             opts,
             deadline,
             max_size,
-            eval_result,
+            eval_results,
             eval_filters,
             eval_deflater,
         );
@@ -443,7 +440,8 @@ fn optimize_raw(
     } else {
         // If idat_recoding is off and reductions were attempted but ended up choosing the baseline,
         // we should still check if the evaluator compressed the baseline smaller than the original.
-        (eval_result?, eval_deflater)
+        let result = eval_results.into_iter().next();
+        (result?, eval_deflater)
     };
 
     if result.idat_data.is_some()
@@ -462,58 +460,52 @@ fn perform_trials(
     opts: &Options,
     deadline: Arc<Deadline>,
     max_size: Option<usize>,
-    mut eval_result: Option<Candidate>,
+    mut eval_results: Vec<Candidate>,
     eval_filters: IndexSet<FilterStrategy>,
     eval_deflater: Deflater,
 ) -> Option<Candidate> {
+    // First perform a fast evaluation of selected filters
     let mut filters = opts.filters.clone();
-    let fast_eval = opts.fast_evaluation && (filters.len() > 1 || eval_result.is_some());
-    if fast_eval {
-        // Perform a fast evaluation of selected filters followed by a single main compression trial
+    if !eval_results.is_empty() {
+        // Some filters have already been evaluated, we don't need to try them again
+        filters = filters.difference(&eval_filters).cloned().collect();
+    }
 
-        if eval_result.is_some() {
-            // Some filters have already been evaluated, we don't need to try them again
-            filters = filters.difference(&eval_filters).cloned().collect();
-        }
-
-        if !filters.is_empty() {
-            trace!("Evaluating {} filters", filters.len());
-            let eval = Evaluator::new(
-                deadline,
-                filters,
-                eval_deflater,
-                opts.optimize_alpha,
-                opts.deflater == eval_deflater,
-            );
-            if let Some(result) = &eval_result {
-                eval.set_best_size(result.estimated_output_size);
+    if !filters.is_empty() {
+        trace!("Evaluating {} filters", filters.len());
+        let eval = Evaluator::new(
+            deadline.clone(),
+            filters.clone(),
+            eval_deflater,
+            opts.optimize_alpha,
+            opts.candidate_threshold,
+            opts.deflater == eval_deflater,
+        );
+        if let Some(best) = eval_results.first() {
+            eval.set_best_size(best.estimated_output_size);
+            for result in &eval_results {
+                eval.try_image(result.image.clone());
             }
+        } else {
             eval.try_image(image.clone());
-            if let Some(result) = eval.get_best_candidate() {
-                eval_result = Some(result);
-            }
         }
-
-        // We should have a result here - fail if not (e.g. deadline passed)
-        let mut result = eval_result?;
-
-        if result.idat_data.is_none() {
-            // Compress with the main deflater
-            debug!("Trying filter {} with {}", result.filter, opts.deflater);
-            let (data, _) = image.filter_image(result.filter_used.clone(), opts.optimize_alpha);
-            match opts.deflater.deflate(&data, max_size) {
-                Ok(idat_data) => {
-                    result.estimated_output_size = result.image.estimated_output_size(&idat_data);
-                    result.idat_data = Some(idat_data);
-                    trace!("{} bytes", result.estimated_output_size);
-                }
-                Err(PngError::DeflatedDataTooLong(bytes)) => {
-                    trace!(">{bytes} bytes");
-                }
-                Err(_) => (),
-            }
+        let mut results = eval.get_best_candidates(opts.max_candidates);
+        if !results.is_empty() {
+            eval_results.append(&mut results);
+            eval_results.sort_by_key(Candidate::cmp_key);
+            let mut best_size = eval_results.first().unwrap().estimated_output_size;
+            best_size += (opts.candidate_threshold * best_size as f64) as usize;
+            eval_results = eval_results
+                .into_iter()
+                .take(opts.max_candidates)
+                .filter(|c| c.estimated_output_size <= best_size)
+                .collect();
         }
-        return Some(result);
+    }
+
+    // Return best result if this is the final round
+    if opts.deflater == eval_deflater {
+        return eval_results.into_iter().next();
     }
 
     // Perform full compression trials of selected filters and determine the best
@@ -530,12 +522,23 @@ fn perform_trials(
     }
 
     debug!("Trying {} filters with {}", filters.len(), opts.deflater);
-    let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
+    let eval = Evaluator::new(
+        deadline,
+        filters,
+        opts.deflater,
+        opts.optimize_alpha,
+        opts.candidate_threshold,
+        true,
+    );
     if let Some(max_size) = max_size {
         eval.set_best_size(max_size);
     }
-    eval.try_image(image);
-    eval.get_best_candidate()
+    if eval_results.is_empty() {
+        eval.try_image(image);
+    } else {
+        eval.try_candidates(eval_results);
+    }
+    eval.get_best_candidates(1).into_iter().next()
 }
 
 #[derive(Debug)]
