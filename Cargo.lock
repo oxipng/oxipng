@@ -118,18 +118,18 @@ checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
 
 [[package]]
 name = "clap"
-version = "4.5.56"
+version = "4.5.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a75ca66430e33a14957acc24c5077b503e7d374151b2b4b3a10c83b4ceb4be0e"
+checksum = "6899ea499e3fb9305a65d5ebf6e3d2248c5fab291f300ad0a704fbe142eae31a"
 dependencies = [
  "clap_builder",
 ]
 
 [[package]]
 name = "clap_builder"
-version = "4.5.56"
+version = "4.5.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793207c7fa6300a0608d1080b858e5fdbe713cdc1c8db9fb17777d8a13e63df0"
+checksum = "7b12c8b680195a62a8364d16b8447b01b6c2c8f9aaf68bee653be34d4245e238"
 dependencies = [
  "anstream",
  "anstyle",
@@ -323,9 +323,9 @@ checksum = "6a82ae493e598baaea5209805c49bbf2ea7de956d50d7da0da1164f9c6d28543"
 
 [[package]]
 name = "libdeflate-sys"
-version = "1.25.0"
+version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23bd6304ebf75390d8a99b88bdf2a266f62647838140cb64af8e6702f6e3fddc"
+checksum = "72753e0008ea87963d2f0770042d0df7abe51fafbb8dcaf618ac440f2f1fec0a"
 dependencies = [
  "cc",
  "pkg-config",
@@ -333,9 +333,9 @@ dependencies = [
 
 [[package]]
 name = "libdeflater"
-version = "1.25.0"
+version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5d4880e6d634d3d029d65fa016038e788cc728a17b782684726fb34ee140caf"
+checksum = "d1ee41cf6fb1bb6030dfb59ffb7bc01ab26aade44142084c87f0fc7a1658fe71"
 dependencies = [
  "libdeflate-sys",
 ]
