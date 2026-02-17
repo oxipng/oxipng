@@ -264,6 +264,13 @@ impl PngImage {
         Ok(image)
     }
 
+    #[must_use]
+    pub fn is_same_format(&self, other: &Self) -> bool {
+        self.ihdr.color_type != other.ihdr.color_type
+            || self.ihdr.bit_depth != other.ihdr.bit_depth
+            || self.ihdr.interlaced != other.ihdr.interlaced
+    }
+
     /// Enable or disable interlacing
     /// Returns the new image if the interlacing was changed, None otherwise
     /// Assumes that the data has already been de-filtered
