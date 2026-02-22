@@ -8,7 +8,7 @@
 ## Overview
 
 Oxipng is a multithreaded lossless PNG/APNG compression optimizer. It can be used via a command-line
-interface or as a library in other Rust programs.
+interface or as a library in other Rust programs. It is fast and highly effective.
 
 ## Installing
 
@@ -78,6 +78,13 @@ are almost always better or equal to lower levels, this is not guaranteed and it
 rare circumstances that a lower level may give a marginally smaller output. Similarly, using Zopfli
 compression (`-z`) is not guaranteed to always be better than without.
 
+## APNG support
+
+Oxipng currently only supports limited optimization of animated PNGs (APNGs). It can perform
+alpha-optimization, refiltering and recompression of all frames, but all transformations will be
+disabled. For best results, it is recommended to use another tool such as
+[apngopt](https://sourceforge.net/projects/apng/files/APNG_Optimizer/) prior to running Oxipng.
+
 ## Git integration via [pre-commit]
 
 Create a `.pre-commit-config.yaml` file like this, or add the lines after the `repos` map
@@ -131,17 +138,13 @@ and specifying the desired ones, for example:
 
 ## History
 
-Oxipng began as a complete rewrite of the OptiPNG project,
-which was assumed to be dead as no commit had been made to it since March 2014.
-(OptiPNG has since released a new version, after Oxipng was first released.)
-The name has been changed to avoid confusion and potential legal issues.
-
-The core goal of rewriting OptiPNG was to implement multithreading,
-which would be very difficult to do within the existing C codebase of OptiPNG.
+Oxipng began in 2015 as a rewrite of the OptiPNG project. The core goal was to implement
+multithreading, which would have been very difficult to do within the existing C codebase of OptiPNG.
 This also served as an opportunity to choose a more modern, safer language (Rust).
 
-Note that, while similar, Oxipng is not a drop-in replacement for OptiPNG.
-If you are migrating from OptiPNG, please check the [help](MANUAL.txt) before using.
+However, Oxipng has evolved considerably since then. While some of the options remain similar to
+OptiPNG, the architecture and capabilities are now quite different. It is not a drop-in
+replacement - if you are migrating from OptiPNG, please check the [help](MANUAL.txt) before using.
 
 ## Contributing
 
@@ -157,36 +160,5 @@ Oxipng is open-source software, distributed under the MIT license.
 
 ## Benchmarks
 
-Tested Oxipng 9.0.0 (commit `c16519b38b0519988db625913be919d4f0e42f5d`, compiled
-on `rustc 1.74.0-nightly (7b4d9e155 2023-09-28)`) against OptiPNG version 0.7.7,
-as packaged by Debian unstable, on a Linux 6.5.0-2-amd64 kernel, Intel Core
-i7-12700 CPU (8 performance cores, 4 efficiency cores, 20 threads), DDR5-5200
-RAM in dual channel configuration.
-
-```
-
-Benchmark 1: ./target/release/oxipng -P ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):      59.6 ms ±   7.7 ms    [User: 77.4 ms, System: 3.6 ms]
-  Range (min … max):    53.3 ms …  89.9 ms    32 runs
-
-Benchmark 2: optipng -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):     132.4 ms ±   0.8 ms    [User: 132.5 ms, System: 0.6 ms]
-  Range (min … max):   131.8 ms … 134.4 ms    22 runs
-
-Summary
-  ./target/release/oxipng -P ./tests/files/rgb_16_should_be_grayscale_8.png ran
-    2.22 ± 0.29 times faster than optipng -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-
-Benchmark 1: ./target/release/oxipng -o4 -P ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):      88.7 ms ±   4.3 ms    [User: 270.3 ms, System: 11.0 ms]
-  Range (min … max):    86.8 ms … 109.4 ms    26 runs
-
-Benchmark 2: optipng -o 4 -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-  Time (mean ± σ):     444.9 ms ±   0.3 ms    [User: 444.8 ms, System: 0.7 ms]
-  Range (min … max):   444.4 ms … 445.6 ms    10 runs
-
-Summary
-  ./target/release/oxipng -o4 -P ./tests/files/rgb_16_should_be_grayscale_8.png ran
-    5.01 ± 0.25 times faster than optipng -o 4 -simulate ./tests/files/rgb_16_should_be_grayscale_8.png
-
-```
+An independent benchmark conducted by @demetris is linked here with permission:\
+[oxipng and friends: A comparison of PNG optimization tools](https://op111.net/posts/2025/09/png-compression-oxipng-optipng-fileoptimizer-cwebp/)
