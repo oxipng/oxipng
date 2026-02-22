@@ -1,12 +1,11 @@
+use indexmap::indexset;
+use oxipng::{internal_tests::*, *};
+use serde_json::Value;
 use std::{
     fs::remove_file,
     path::{Path, PathBuf},
     process::Command,
 };
-
-use indexmap::indexset;
-use oxipng::{internal_tests::*, *};
-use serde_json::Value;
 
 const GRAY: u8 = 0;
 const RGB: u8 = 2;
@@ -97,13 +96,9 @@ fn test_it_converts(
 
 #[test]
 fn verbose_mode() {
-    use std::cell::RefCell;
-    #[cfg(not(feature = "parallel"))]
-    use std::sync::mpsc::{Sender, channel as unbounded};
-
-    #[cfg(feature = "parallel")]
-    use crossbeam_channel::{Sender, unbounded};
     use log::{Level, LevelFilter, Log, Metadata, Record, set_logger, set_max_level};
+    use std::cell::RefCell;
+    use std::sync::mpsc::{Sender, channel};
 
     // Rust runs tests in parallel by default.
     // We want to make sure that we verify only logs from our test.
@@ -143,7 +138,7 @@ fn verbose_mode() {
     let input = PathBuf::from("tests/files/verbose_mode.png");
     let (output, opts) = get_opts(&input);
 
-    let (sender, receiver) = unbounded();
+    let (sender, receiver) = channel();
 
     let thread_init = move || {
         // Initialise logs storage for all threads within our test.

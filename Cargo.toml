@@ -40,7 +40,6 @@ required-features = ["zopfli"]
 [dependencies]
 bitvec = "1.0.1"
 clap = { version = "4.5.58", optional = true, features = ["wrap_help"] }
-crossbeam-channel = { version = "0.5.15", optional = true }
 env_logger = { version = "0.11.9", optional = true, default-features = false, features = ["auto-color"] }
 image = { version = "0.25.9", optional = true, default-features = false, features = ["png"] }
 indexmap = "2.13.0"
@@ -61,7 +60,7 @@ serde_json = "1.0.149"
 [features]
 binary = ["dep:clap", "dep:glob", "dep:env_logger", "dep:parse-size"]
 default = ["binary", "parallel", "zopfli"]
-parallel = ["dep:rayon", "indexmap/rayon", "dep:crossbeam-channel"]
+parallel = ["dep:rayon", "indexmap/rayon"]
 freestanding = ["libdeflater/freestanding"]
 sanity-checks = ["dep:image"]
 zopfli = ["dep:zopfli"]
