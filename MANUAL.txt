@@ -13,14 +13,21 @@ Options:
           compression. Lower levels are faster, higher levels provide better compression, though
           with increasingly diminishing returns.
           
-              0   => --zc 5  --fast              (filter chosen heuristically)
-              1   => --zc 10 --fast              (filter chosen heuristically)
+              0   => --zc 5  --fast              (single filter, chosen heuristically)
+              1   => --zc 10 --fast              (single filter, chosen heuristically)
               2   => --zc 11 -f 0,1,6,7 --fast
               3   => --zc 11 -f 0,7,8,9         --brute-level 1 --brute-lines 3
               4   => --zc 12 -f 0,7,8,9         --brute-level 1 --brute-lines 4
               5   => --zc 12 -f 0,1,2,5,6,7,8,9 --brute-level 4 --brute-lines 4
               6   => --zc 12 -f 0-9             --brute-level 5 --brute-lines 8
               max => (stable alias for the maximum level)
+          
+          For levels 0 and 1, the heuristic currently chooses exactly one filter based on bit depth:
+              bit depth >= 8  => Bigrams (7)
+              bit depth < 8   => None (0)
+          
+          Since only one filter is enabled by default at these levels, '--fast' is usually a no-op
+          unless you manually enable additional filters, e.g. '-o0 -f 0,7'.
           
           Manually specifying a compression option (zc, f, etc.) will override the optimization
           preset, regardless of the order you write the arguments.
@@ -137,6 +144,9 @@ Options:
           Perform a fast compression evaluation of each enabled filter, followed by a single main
           compression trial of the best result. Recommended if you have more filters enabled than
           CPU cores.
+          
+          On preset levels 0 and 1 this is typically a no-op, because only one filter is enabled
+          by default at those levels.
 
       --zc <level>
           Deflate compression level (0-12) for main compression trials. The levels here are defined
