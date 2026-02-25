@@ -221,18 +221,73 @@ fn collect_files(
     in_out_pairs
 }
 
+#[cfg(any(windows, test))]
+fn escape_square_brackets_in_dir_prefix(pattern: &str) -> Option<String> {
+    // We only attempt fallback escaping when there is an obvious wildcard segment.
+    // This avoids changing behavior for plain literal paths.
+    let first_wildcard = pattern
+        .char_indices()
+        .find(|(_, c)| matches!(c, '*' | '?' | '{'))
+        .map(|(idx, _)| idx)?;
+
+    // Only escape directory components (up to the last separator before wildcard).
+    // This preserves intended character class patterns in file names.
+    let dir_end = pattern[..first_wildcard]
+        .char_indices()
+        .rfind(|(_, c)| matches!(c, '/' | '\\'))
+        .map(|(idx, _)| idx + 1)?;
+
+    let (dir_prefix, remainder) = pattern.split_at(dir_end);
+    if !dir_prefix.contains('[') && !dir_prefix.contains(']') {
+        return None;
+    }
+
+    let mut escaped_prefix = String::with_capacity(dir_prefix.len());
+    for ch in dir_prefix.chars() {
+        match ch {
+            '[' => escaped_prefix.push_str("[[]"),
+            ']' => escaped_prefix.push_str("[]]"),
+            _ => escaped_prefix.push(ch),
+        }
+    }
+    if escaped_prefix == dir_prefix {
+        None
+    } else {
+        Some(format!("{escaped_prefix}{remainder}"))
+    }
+}
+
+#[cfg(windows)]
+fn glob_matches(pattern: &str) -> Option<Vec<PathBuf>> {
+    // Use MatchOptions::default() to disable case-sensitivity.
+    glob::glob_with(pattern, glob::MatchOptions::default())
+        .ok()
+        .map(|paths| paths.flatten().collect::<Vec<_>>())
+}
+
 #[cfg(windows)]
 fn apply_glob_pattern(path: PathBuf) -> Vec<PathBuf> {
-    let matches = path
-        .to_str()
-        // Use MatchOptions::default() to disable case-sensitivity
-        .and_then(|pattern| glob::glob_with(pattern, glob::MatchOptions::default()).ok())
-        .map(|paths| paths.flatten().collect::<Vec<_>>());
+    let Some(pattern) = path.to_str() else {
+        return vec![path];
+    };
 
-    match matches {
-        Some(paths) if !paths.is_empty() => paths,
-        _ => vec![path],
+    if let Some(paths) = glob_matches(pattern) {
+        if !paths.is_empty() {
+            return paths;
+        }
     }
+
+    if let Some(escaped_pattern) = escape_square_brackets_in_dir_prefix(pattern)
+        && let Some(paths) = glob_matches(&escaped_pattern)
+        && !paths.is_empty()
+    {
+        warn!(
+            "No matches for glob pattern `{pattern}`; retrying with escaped directory brackets: `{escaped_pattern}`"
+        );
+        return paths;
+    }
+
+    vec![path]
 }
 
 fn parse_opts_into_struct(
@@ -631,7 +686,7 @@ fn format_bytes(count: i64, include_raw: bool) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::format_bytes;
+    use super::{escape_square_brackets_in_dir_prefix, format_bytes};
 
     #[test]
     fn test_format_bytes() {
@@ -640,5 +695,25 @@ mod tests {
         assert_eq!(format_bytes(12_500_000, false), "11.9 MiB");
         assert_eq!(format_bytes(2_000_000_000, false), "1.86 GiB");
         assert_eq!(format_bytes(-1024, false), "-1.00 KiB");
+    }
+
+    #[test]
+    fn test_escape_square_brackets_in_dir_prefix() {
+        let pattern = r"F:\[a]bug test\*.png";
+        let escaped = escape_square_brackets_in_dir_prefix(pattern)
+            .expect("should escape bracket literals in directory segment");
+        assert_eq!(escaped, r"F:\[[]a[]]bug test\*.png");
+    }
+
+    #[test]
+    fn test_escape_does_not_change_filename_character_class() {
+        let pattern = r"F:\images\file[0-9]*.png";
+        assert!(escape_square_brackets_in_dir_prefix(pattern).is_none());
+    }
+
+    #[test]
+    fn test_escape_requires_wildcard_segment() {
+        let pattern = r"F:\[a]bug test\image.png";
+        assert!(escape_square_brackets_in_dir_prefix(pattern).is_none());
     }
 }
