@@ -20,8 +20,10 @@ use log::{Level, LevelFilter, error, warn};
 #[cfg(feature = "zopfli")]
 use oxipng::ZopfliOptions;
 use oxipng::{
-    Deflater, FilterStrategy, InFile, OptimizationResult, Options, OutFile, PngError, StripChunks,
+    Deflater, FilterStrategy, InFile, MinGain, OptimizationResult, Options, OutFile, PngError,
+    StripChunks,
 };
+use parse_size::parse_size;
 use rayon::prelude::*;
 
 use crate::cli::DISPLAY_CHUNKS;
@@ -38,7 +40,7 @@ fn main() -> ExitCode {
         .after_long_help("")
         .get_matches_from(std::env::args());
 
-    let (mut out_file, out_dir, opts) = match parse_opts_into_struct(&matches) {
+    let (mut out_file, out_dir, opts, min_gain) = match parse_opts_into_struct(&matches) {
         Ok(x) => x,
         Err(x) => {
             error!("{x}");
@@ -89,7 +91,7 @@ fn main() -> ExitCode {
         stdout().flush().ok();
     }
     let process = |(input, output): &(InFile, OutFile)| {
-        let result = process_file(input, output, &opts);
+        let result = process_file(input, output, &opts, min_gain);
         if print_progress && matches!(result, OptimizationResult::Ok(_)) {
             let value = num_processed.fetch_add(1, AcqRel) + 1;
             print!("\rFiles processed: {}/{}...", value, total_files);
@@ -115,7 +117,7 @@ fn main() -> ExitCode {
                 num_succeeded += 1;
                 total_in += *insize as i64;
                 total_out += *outsize as i64;
-                if !opts.force && insize == outsize {
+                if insize == outsize && (!opts.force || min_gain.is_some()) {
                     num_not_optimized += 1;
                 }
             }
@@ -292,7 +294,7 @@ fn apply_glob_pattern(path: PathBuf) -> Vec<PathBuf> {
 
 fn parse_opts_into_struct(
     matches: &ArgMatches,
-) -> Result<(OutFile, Option<PathBuf>, Options), String> {
+) -> Result<(OutFile, Option<PathBuf>, Options, Option<MinGain>), String> {
     let log_level = match matches.get_count("verbose") {
         _ if matches.get_flag("quiet") => LevelFilter::Off,
         0 => LevelFilter::Warn,
@@ -398,6 +400,11 @@ fn parse_opts_into_struct(
     }
 
     opts.force = matches.get_flag("force");
+
+    let min_gain = matches
+        .get_one::<String>("min-gain")
+        .map(|value| parse_min_gain(value))
+        .transpose()?;
 
     opts.fix_errors = matches.get_flag("fix");
 
@@ -505,7 +512,7 @@ fn parse_opts_into_struct(
             .map_err(|err| err.to_string())?;
     }
 
-    Ok((out_file, out_dir, opts))
+    Ok((out_file, out_dir, opts, min_gain))
 }
 
 fn parse_chunk_name(name: &str) -> Result<[u8; 4], String> {
@@ -513,6 +520,33 @@ fn parse_chunk_name(name: &str) -> Result<[u8; 4], String> {
         .as_bytes()
         .try_into()
         .map_err(|_| format!("Invalid chunk name {name}"))
+}
+
+fn parse_min_gain(value: &str) -> Result<MinGain, String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err("Minimum gain must not be empty".to_owned());
+    }
+
+    if let Some(percent) = value.strip_suffix('%') {
+        let parsed = percent
+            .trim()
+            .parse::<f64>()
+            .map_err(|_| format!("Invalid percentage for --min-gain: {value}"))?;
+        if !(0.0..=100.0).contains(&parsed) || !parsed.is_finite() {
+            return Err(format!(
+                "Percentage for --min-gain must be between 0% and 100%: {value}"
+            ));
+        }
+        return MinGain::ratio(parsed / 100.0)
+            .ok_or_else(|| format!("Invalid percentage for --min-gain: {value}"));
+    }
+
+    let parsed =
+        parse_size(value).map_err(|_| format!("Invalid byte size for --min-gain: {value}"))?;
+    let bytes = usize::try_from(parsed)
+        .map_err(|_| format!("Byte size for --min-gain is too large: {value}"))?;
+    Ok(MinGain::bytes(bytes))
 }
 
 fn parse_numeric_range_opts(
@@ -568,7 +602,12 @@ fn parse_numeric_range_opts(
     Err(ERROR_MESSAGE.to_owned())
 }
 
-fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> OptimizationResult {
+fn process_file(
+    input: &InFile,
+    output: &OutFile,
+    opts: &Options,
+    min_gain: Option<MinGain>,
+) -> OptimizationResult {
     if let (Some(max_size), InFile::Path(path)) = (opts.max_decompressed_size, input) {
         if path.metadata().is_ok_and(|m| m.len() > max_size as u64) {
             warn!("{input}: Skipped: File exceeds the maximum size ({max_size} bytes)");
@@ -576,7 +615,7 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
         }
     }
 
-    let result = oxipng::optimize(input, output, opts);
+    let result = oxipng::optimize_with(input, output, opts, min_gain);
     match &result {
         Ok(_) => {}
         Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
@@ -686,7 +725,8 @@ fn format_bytes(count: i64, include_raw: bool) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{escape_square_brackets_in_dir_prefix, format_bytes};
+    use super::{escape_square_brackets_in_dir_prefix, format_bytes, parse_min_gain};
+    use oxipng::MinGain;
 
     #[test]
     fn test_format_bytes() {
@@ -715,5 +755,24 @@ mod tests {
     fn test_escape_requires_wildcard_segment() {
         let pattern = r"F:\[a]bug test\image.png";
         assert!(escape_square_brackets_in_dir_prefix(pattern).is_none());
+    }
+
+    #[test]
+    fn test_parse_min_gain_valid_values() {
+        assert_eq!(parse_min_gain("1024"), Ok(MinGain::Bytes(1024)));
+        assert_eq!(parse_min_gain("4KiB"), Ok(MinGain::Bytes(4096)));
+        assert_eq!(parse_min_gain("1MB"), Ok(MinGain::Bytes(1_000_000)));
+
+        let parsed = parse_min_gain("0.5%").expect("valid percent should parse");
+        assert!(matches!(parsed, MinGain::Ratio(ratio) if (ratio - 0.005).abs() < f64::EPSILON));
+    }
+
+    #[test]
+    fn test_parse_min_gain_invalid_values() {
+        assert!(parse_min_gain("").is_err());
+        assert!(parse_min_gain("-1").is_err());
+        assert!(parse_min_gain("-0.5%").is_err());
+        assert!(parse_min_gain("101%").is_err());
+        assert!(parse_min_gain("abc").is_err());
     }
 }
