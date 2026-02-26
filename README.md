@@ -76,14 +76,14 @@ All options are case-sensitive.
 \* Note that oxipng is not a brute-force optimizer. This means that while higher optimization levels
 are almost always better or equal to lower levels, this is not guaranteed and it is possible in
 rare circumstances that a lower level may give a marginally smaller output. Similarly, using Zopfli
-compression (`-z`) is not guaranteed to always be better than without.
+compression (`-z`) is not guaranteed to always be better than default compression.
 
 ## APNG support
 
 Oxipng currently only supports limited optimization of animated PNGs (APNGs). It can perform
 alpha-optimization, refiltering and recompression of all frames, but all transformations will be
 disabled. For best results, it is recommended to use another tool such as
-[apngopt](https://sourceforge.net/projects/apng/files/APNG_Optimizer/) prior to running Oxipng.
+[apngopt](https://sourceforge.net/projects/apng/files/APNG_Optimizer/) before running Oxipng.
 
 ## Git integration via [pre-commit]
 
@@ -144,7 +144,7 @@ This also served as an opportunity to choose a more modern, safer language (Rust
 
 However, Oxipng has evolved considerably since then. While some of the options remain similar to
 OptiPNG, the architecture and capabilities are now quite different. It is not a drop-in
-replacement - if you are migrating from OptiPNG, please check the [help](MANUAL.txt) before using.
+replacement - if you are migrating from OptiPNG, please check the [help](MANUAL.txt) before use.
 
 ## Contributing
 
@@ -154,11 +154,11 @@ to submit a fix with the bug report, it is preferred that you do so via pull req
 however you do not need to be a Rust developer to contribute.
 Other contributions (such as improving documentation or translations) are also welcome via GitHub.
 
+## Benchmarks
+
+An independent benchmark is linked here with permission by the author:\
+[oxipng and friends: A comparison of PNG optimization tools](https://op111.net/posts/2025/09/png-compression-oxipng-optipng-fileoptimizer-cwebp/)
+
 ## License
 
 Oxipng is open-source software, distributed under the MIT license.
-
-## Benchmarks
-
-An independent benchmark conducted by @demetris is linked here with permission:\
-[oxipng and friends: A comparison of PNG optimization tools](https://op111.net/posts/2025/09/png-compression-oxipng-optipng-fileoptimizer-cwebp/)
