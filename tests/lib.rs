@@ -132,9 +132,6 @@ fn min_gain_bytes_skips_in_place_write() {
     assert_eq!(result, (input_data.len(), input_data.len()));
     assert_eq!(fs::read(&input_path).unwrap(), input_data);
 
-    let mut permissions = fs::metadata(&input_path).unwrap().permissions();
-    permissions.set_readonly(false);
-    fs::set_permissions(&input_path, permissions).unwrap();
     fs::remove_file(&input_path).ok();
 }
 
