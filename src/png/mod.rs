@@ -3,7 +3,6 @@ use std::{fs, path::Path, sync::Arc};
 use bitvec::bitarr;
 use libdeflater::{CompressionLvl, Compressor};
 use log::warn;
-use rgb::ComponentSlice;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -192,7 +191,7 @@ impl PngData {
             ColorType::Indexed { palette } => {
                 let mut palette_data = Vec::with_capacity(palette.len() * 3);
                 for px in palette {
-                    palette_data.extend_from_slice(px.rgb().as_slice());
+                    palette_data.extend_from_slice(px.rgb().as_ref());
                 }
                 write_png_block(b"PLTE", &palette_data, &mut output);
                 if let Some(last_trns) = palette.iter().rposition(|px| px.a != 255) {

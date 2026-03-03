@@ -1,7 +1,7 @@
 use std::hash::{BuildHasherDefault, Hash};
 
 use indexmap::IndexSet;
-use rgb::{ComponentMap, ComponentSlice, FromSlice, RGB, RGBA, alt::Gray};
+use rgb::{ComponentMap, FromSlice, RGB, RGBA, alt::Gray};
 use rustc_hash::FxHasher;
 
 use crate::{
@@ -193,7 +193,7 @@ pub fn indexed_to_channels(
     let mut data = Vec::with_capacity(out_size);
     for b in &png.data {
         let color = palette.get(*b as usize).unwrap_or(&black);
-        data.extend_from_slice(&color.as_slice()[ch_start..=ch_end]);
+        data.extend_from_slice(&color.as_ref()[ch_start..=ch_end]);
     }
 
     Some(PngImage {
