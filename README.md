@@ -57,6 +57,8 @@ The most commonly used options are as follows:
 - Optimization: `-o 0` through `-o 6` (or `-o max`), lower is faster, higher is better compression.
   The default (`-o 2`) is quite fast and provides good compression. Higher levels can be notably
   better* but generally have increasingly diminishing returns.
+- Minimum gain: `--min-gain <value>` only writes optimized output when savings reach a threshold.
+  Use a percentage (`1%`, `0.5%`) or bytes (`1024`, `4KiB`, `1MB`).
 - Strip: Used to remove metadata info from processed images. Used via `--strip [safe,all]`.
   Can save a few kilobytes if you don't need the metadata. "Safe" removes only metadata that
   will never affect rendering of the image. "All" removes all metadata that is not critical

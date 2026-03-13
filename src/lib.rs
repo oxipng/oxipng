@@ -30,7 +30,7 @@ pub use crate::{
     error::PngError,
     filters::{FilterStrategy, RowFilter},
     headers::StripChunks,
-    options::{InFile, Options, OutFile},
+    options::{InFile, MinGain, Options, OutFile},
 };
 use crate::{
     evaluate::{Candidate, Evaluator},
@@ -167,6 +167,19 @@ impl RawImage {
 ///
 /// Returns the original and optimized file sizes
 pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> OptimizationResult {
+    optimize_with(input, output, opts, None)
+}
+
+/// Perform optimization on the input file using the options provided, with an optional minimum
+/// savings threshold.
+///
+/// Returns the original and optimized file sizes
+pub fn optimize_with(
+    input: &InFile,
+    output: &OutFile,
+    opts: &Options,
+    min_gain: Option<MinGain>,
+) -> OptimizationResult {
     // Read in the file and try to decode as PNG.
     info!("Processing: {input}");
 
@@ -190,7 +203,7 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
 
     let in_length = in_data.len();
 
-    if is_fully_optimized(in_length, optimized_output.len(), opts) {
+    if should_keep_original(in_length, optimized_output.len(), opts, min_gain) {
         match (output, input) {
             // If output path is None, it also means same as the input path
             (OutFile::Path { path, .. }, InFile::Path(input_path))
@@ -285,6 +298,15 @@ pub fn optimize(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
 /// Perform optimization on the input file using the options provided, where the file is already
 /// loaded in-memory
 pub fn optimize_from_memory(data: &[u8], opts: &Options) -> PngResult<Vec<u8>> {
+    optimize_from_memory_with(data, opts, None)
+}
+
+/// Perform optimization on in-memory image data with an optional minimum savings threshold.
+pub fn optimize_from_memory_with(
+    data: &[u8],
+    opts: &Options,
+    min_gain: Option<MinGain>,
+) -> PngResult<Vec<u8>> {
     // Read in the file and try to decode as PNG.
     info!("Processing from memory");
 
@@ -296,7 +318,7 @@ pub fn optimize_from_memory(data: &[u8], opts: &Options) -> PngResult<Vec<u8>> {
     // Run the optimizer on the decoded PNG.
     let optimized_output = optimize_png(&mut png, data, opts, deadline)?;
 
-    if is_fully_optimized(original_size, optimized_output.len(), opts) {
+    if should_keep_original(original_size, optimized_output.len(), opts, min_gain) {
         info!("Image already optimized");
         Ok(data.to_vec())
     } else {
@@ -643,4 +665,14 @@ fn recompress_frames(
 /// Check if an image was already optimized prior to oxipng's operations
 const fn is_fully_optimized(original_size: usize, optimized_size: usize, opts: &Options) -> bool {
     original_size <= optimized_size && !opts.force
+}
+
+fn should_keep_original(
+    original_size: usize,
+    optimized_size: usize,
+    opts: &Options,
+    min_gain: Option<MinGain>,
+) -> bool {
+    is_fully_optimized(original_size, optimized_size, opts)
+        || min_gain.is_some_and(|threshold| !threshold.is_satisfied(original_size, optimized_size))
 }
