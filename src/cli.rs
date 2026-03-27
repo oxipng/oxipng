@@ -298,6 +298,8 @@ The default value depends on the optimization level preset.")
         .arg(
             Arg::new("no-palette-reduction")
                 .help("Do not change color palette")
+                .long_help("\
+Do not convert to indexed and do not modify an existing color palette.")
                 .long("np")
                 .action(ArgAction::SetTrue),
         )
