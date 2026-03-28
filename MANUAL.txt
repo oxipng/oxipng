@@ -171,6 +171,12 @@ Options:
       --force
           Write the output even if it is larger than the input
 
+      --min-gain <value>
+          Only write optimized output when savings meet this threshold. Accepts percentages
+          (e.g. 1%, 0.5%) or byte sizes (e.g. 1024, 4KiB, 1MB).
+          
+          If savings is below the threshold, it is treated as no-change.
+
   -z, --zopfli
           Use the much slower but stronger Zopfli compressor for main compression trials.
           Recommended use is with '-o max' and '--fast'.
