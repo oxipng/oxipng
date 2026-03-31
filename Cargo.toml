@@ -40,7 +40,7 @@ required-features = ["zopfli"]
 [dependencies]
 bitvec = "1.0.1"
 clap = { version = "4.6.0", optional = true, features = ["wrap_help"] }
-env_logger = { version = "0.11.9", optional = true, default-features = false, features = ["auto-color"] }
+env_logger = { version = "0.11.10", optional = true, default-features = false, features = ["auto-color"] }
 image = { version = "0.25.9", optional = true, default-features = false, features = ["png"] }
 indexmap = "2.13.0"
 libdeflater = "1.25.2"
@@ -48,7 +48,7 @@ log = "0.4.29"
 parse-size = { version = "1.1.0", optional = true }
 rayon = { version = "1.11.0", optional = true }
 rgb = "0.8.53"
-rustc-hash = "2.1.1"
+rustc-hash = "2.1.2"
 zopfli = { version = "0.8.3", optional = true, default-features = false, features = ["std", "zlib"] }
 
 [target.'cfg(windows)'.dependencies]
