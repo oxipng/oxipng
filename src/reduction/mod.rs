@@ -118,7 +118,7 @@ pub(crate) fn perform_reductions(
     // Attempt to reduce to indexed
     // Keep the existing `png` var in case it is grayscale - we can test both for depth reduction later
     let mut indexed = None;
-    if opts.color_type_reduction && !deadline.passed() {
+    if opts.color_type_reduction && opts.palette_reduction && !deadline.passed() {
         if let Some(reduced) = reduced_to_indexed(&png, opts.grayscale_reduction) {
             // Make sure the palette gets sorted (but don't bother evaluating both results)
             let new = Arc::new(sorted_palette(&reduced).unwrap_or(reduced));
