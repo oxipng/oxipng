@@ -1,6 +1,5 @@
 use std::{fs, path::Path, sync::Arc};
 
-use bitvec::bitarr;
 use libdeflater::{CompressionLvl, Compressor};
 use log::warn;
 use rustc_hash::FxHashMap;
@@ -373,6 +372,12 @@ impl PngImage {
         let mut f_buf = Vec::new();
         // For heuristic strategies, keep track of the actual filter used for each line
         let mut filters_used = Vec::new();
+        // Pre-allocate buffers for the Bigrams strategy to avoid per-line allocations
+        let (mut bigram_seen, mut bigram_touched) = if matches!(strategy, FilterStrategy::Bigrams) {
+            (vec![false; 0x10000], Vec::<u16>::new())
+        } else {
+            (Vec::new(), Vec::new())
+        };
         for (i, line) in self.scan_lines(false).enumerate() {
             if prev_pass != line.pass || line.data.len() != prev_line.len() {
                 prev_line = vec![0; line.data.len()];
@@ -464,18 +469,29 @@ impl PngImage {
                         let mut best_size = usize::MAX;
                         for f in try_filters {
                             f.filter_line(bpp, &mut line_data, &prev_line, &mut f_buf, alpha_bytes);
-                            let mut set = bitarr![0; 0x10000];
+                            let mut count = 0;
                             for pair in f_buf.windows(2) {
                                 let bigram = ((pair[0] as usize) << 8) | pair[1] as usize;
-                                set.set(bigram, true);
+                                if !bigram_seen[bigram] {
+                                    count += 1;
+                                    if count >= best_size {
+                                        break;
+                                    }
+                                    bigram_seen[bigram] = true;
+                                    bigram_touched.push(bigram as u16);
+                                }
                             }
-                            let size = set.count_ones();
-                            if size < best_size {
-                                best_size = size;
+                            if count < best_size {
+                                best_size = count;
                                 std::mem::swap(&mut best_line, &mut f_buf);
                                 best_line_raw.clone_from(&line_data);
                                 best_filter = *f;
                             }
+                            // Clear only the entries that were touched
+                            for &idx in &bigram_touched {
+                                bigram_seen[idx as usize] = false;
+                            }
+                            bigram_touched.clear();
                         }
                     }
                     FilterStrategy::BigEnt => {
