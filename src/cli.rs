@@ -341,6 +341,19 @@ be processed successfully. The output will always have correct checksums.")
                 .action(ArgAction::SetTrue),
         )
         .arg(
+            Arg::new("min-gain")
+                .help("Require savings of at least <value> before writing")
+                .long_help("\
+Only write optimized output if savings meets this threshold. The value may be specified as \
+a percentage (e.g. '1%' or '0.5%') or as a byte size (e.g. '1024', '4KiB', '1MB').
+
+If savings is below the threshold, the result is treated as no-change:
+    - in-place output will not overwrite the input file
+    - explicit output path, stdout, and dry-run will use original data")
+                .long("min-gain")
+                .value_name("value"),
+        )
+        .arg(
             Arg::new("zopfli")
                 .help("Use the much slower but stronger Zopfli compressor")
                 .long_help("\
