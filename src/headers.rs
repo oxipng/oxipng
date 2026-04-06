@@ -263,11 +263,11 @@ pub fn extract_icc(iccp: &Chunk, max_size: Option<usize>) -> Option<Vec<u8>> {
     if compression_method != 0 {
         return None; // The profile is supposed to be compressed (method 0)
     }
-    // The decompressed size is unknown so we have to guess the required buffer size
-    let mut out_size = compressed_data.len() * 2 + 1000;
-    if let Some(max) = max_size {
-        out_size = out_size.min(max);
-    }
+    // Libdeflate works with a fixed size buffer. Since the decompressed size is unknown we have to
+    // guess the required buffer size. We allow a fairly generous 10x factor with a minimum of 1000.
+    let mut out_size = (compressed_data.len() * 10).max(1000);
+    // For sanity, impose a default limit of 1MB.
+    out_size = out_size.min(max_size.unwrap_or(1_000_000));
     match inflate(compressed_data, out_size) {
         Ok(icc) => Some(icc),
         Err(e) => {
