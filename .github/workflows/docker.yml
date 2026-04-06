@@ -17,76 +17,38 @@ on:
         type: boolean
         default: true
 
-env:
-  REGISTRY: ghcr.io
-  # ghcr.io/OWNER/REPO
-  IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    uses: docker/github-builder/.github/workflows/build.yml@v1
     permissions:
       contents: read
       packages: write
       id-token: write
       attestations: write
+    with:
+      output: image
+      platforms: linux/amd64,linux/arm64
+      push: ${{ github.event_name != 'pull_request' }}
+      cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
+      # We don't sign the image because ghcr.io doesn't support OCI Referrers API yet, and the fallback relies on pushing new tags on each build
+      # https://github.com/docker/github-builder/issues/109#issuecomment-3885082486
+      # https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#backwards-compatibility
+      sign: false
+      sbom: true
+      meta-images: ghcr.io/${{ github.repository }}
+      meta-tags: |
+        type=ref,event=branch
+        type=ref,event=pr
+        type=semver,pattern={{raw}}
+      set-meta-annotations: true
+      set-meta-labels: true
+      labels: |
+        org.opencontainers.image.title=Oxipng
+      annotations: |
+        org.opencontainers.image.title=Oxipng
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v4
-
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
-      - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Extract metadata (tags, labels) for Docker
-      # For some reason the title have to be set manually
-      # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          labels: |
-            org.opencontainers.image.title=Oxipng
-          annotations: |
-            org.opencontainers.image.title=Oxipng
-
-      # Build and push Docker image with Buildx (don't push on PR)
-      # Cache isn't used for tags and on workflow_dispatch if specified
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          no-cache: ${{ (github.event_name == 'workflow_dispatch' && !inputs.use_cache) || startsWith(github.ref, 'refs/tags/') }}
-
-      # Attest the build provenance
-      # TODO: enable push to registry when referrers API will be supported by ghcr.io
-      - name: Attest Build Provenance
-        if: github.event_name != 'pull_request'
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.build-and-push.outputs.digest }}
-          push-to-registry: false
