@@ -55,7 +55,6 @@ jobs:
 
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
-      RUSTFLAGS: '-Zlocation-detail=none'
 
     steps:
       - name: Checkout source
@@ -74,7 +73,7 @@ jobs:
         with:
           toolchain: nightly
           target: ${{ env.CARGO_BUILD_TARGET }}
-          components: clippy, rustfmt
+          components: clippy, rustfmt, rust-src
           cache-bin: false
           cache-shared-key: cache
 
@@ -125,7 +124,9 @@ jobs:
         run: cargo doc --release --no-deps
 
       - name: Build CLI binary
-        run: cargo build --release
+        run: cargo build --release -Zbuild-std
+        env:
+          RUSTFLAGS: '-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort'
 
       - name: Upload CLI binary as artifact
         uses: actions/upload-artifact@v7
