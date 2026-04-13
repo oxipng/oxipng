@@ -123,7 +123,7 @@ jobs:
         run: tail -n +3 CHANGELOG.md | sed -e '/^$/,$d' > RELEASE_NOTES.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: v${{ steps.oxipngMeta.outputs.version }}
           body_path: RELEASE_NOTES.txt
