@@ -430,6 +430,16 @@ fn parse_opts_into_struct(
         let iterations_without_improvement = *matches
             .get_one::<NonZeroU64>("iterations-without-improvement")
             .unwrap_or(&NonZeroU64::MAX);
+
+        if iterations_without_improvement > iteration_count
+            && iterations_without_improvement != NonZeroU64::MAX
+        {
+            warn!(
+                "--ziwi ({}) is higher than --zi ({}) and will never be reached.",
+                iterations_without_improvement, iteration_count
+            );
+        }
+
         opts.deflater = Deflater::Zopfli(ZopfliOptions {
             iteration_count,
             iterations_without_improvement,
