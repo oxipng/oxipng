@@ -7,7 +7,7 @@
 ## Version 10.0.0
 
 - [Breaking] CLI: Change short zopfli flag from `-Z` to `-z`.
-- [Breaking] CLI: Change `--pretend`/`-P` to `--dry-run`/`-D`.
+- [Breaking] CLI: Change `--pretend`/`-P` to `--dry-run`/`-d`.
 - [Breaking] CLI: Change `--interlace` options from `1`/`0` to `on`/`off`.
 - [Breaking] API: Change `Options.interlace: Option<Interlacing>` to `Options.interlace: Option<bool>`.
 - [Breaking] API: Change `Options.filter: IndexSet<RowFilter>` to `Options.filters: IndexSet<FilterStrategy>`.
