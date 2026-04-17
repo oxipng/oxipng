@@ -1,3 +1,11 @@
+## Version 10.1.1
+
+- [Performance] Improve Bigrams performance, giving notably faster results at lower levels.
+- [Improvement] Change `--np` flag to also prevent conversion to indexed from other color types.
+- [Improvement] Improve support for recompressing ICC profiles with high compression ratios.
+- [Misc] Add warning when `--ziwi` exceeds `--zi`.
+- [Build] Further reduce size of binaries.
+
 ## Version 10.1.0
 
 - [Feature] Add `--json` option for machine-readable output.
