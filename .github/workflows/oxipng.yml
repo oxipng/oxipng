@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   merge_group:
+    types:
+      - checks_requested
   workflow_dispatch:
 
 concurrency:
