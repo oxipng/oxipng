@@ -1,3 +1,11 @@
+## Version 10.1.1
+
+- [Performance] Improve Bigrams performance, giving notably faster results at lower levels.
+- [Improvement] Change `--np` flag to also prevent conversion to indexed from other color types.
+- [Improvement] Improve support for recompressing ICC profiles with high compression ratios.
+- [Misc] Add warning when `--ziwi` exceeds `--zi`.
+- [Build] Further reduce size of binaries.
+
 ## Version 10.1.0
 
 - [Feature] Add `--json` option for machine-readable output.
@@ -7,7 +15,7 @@
 ## Version 10.0.0
 
 - [Breaking] CLI: Change short zopfli flag from `-Z` to `-z`.
-- [Breaking] CLI: Change `--pretend`/`-P` to `--dry-run`/`-D`.
+- [Breaking] CLI: Change `--pretend`/`-P` to `--dry-run`/`-d`.
 - [Breaking] CLI: Change `--interlace` options from `1`/`0` to `on`/`off`.
 - [Breaking] API: Change `Options.interlace: Option<Interlacing>` to `Options.interlace: Option<bool>`.
 - [Breaking] API: Change `Options.filter: IndexSet<RowFilter>` to `Options.filters: IndexSet<FilterStrategy>`.
