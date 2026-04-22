@@ -6,9 +6,7 @@ on:
     tags:
       - 'v*.*.*'
   pull_request:
-    types:
-      - opened
-      - synchronize
+  merge_group:
   workflow_dispatch:
     inputs:
       use_cache:
@@ -16,6 +14,10 @@ on:
         required: true
         type: boolean
         default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
