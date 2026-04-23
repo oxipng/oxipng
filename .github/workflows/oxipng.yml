@@ -3,10 +3,14 @@ name: oxipng
 on:
   push:
   pull_request:
+  merge_group:
     types:
-      - opened
-      - synchronize
+      - checks_requested
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.merge_group.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
