@@ -19,8 +19,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 
-    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
-    if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
+    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit.
+    # We also exclude 'push' events from the Merge Queue (gh-readonly-queue/) because they
+    # trigger alongside the 'merge_group' event. Without this, a race condition in the
+    # concurrency group could cause the 'push' event to cancel the 'merge_group' event.
+    if: >-
+      github.ref_type != 'tag' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork) &&
+      (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
 
     strategy:
       fail-fast: false
@@ -154,8 +160,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
-    if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
+    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit.
+    # We also exclude 'push' events from the Merge Queue (gh-readonly-queue/) because they
+    # trigger alongside the 'merge_group' event. Without this, a race condition in the
+    # concurrency group could cause the 'push' event to cancel the 'merge_group' event.
+    if: >-
+      github.ref_type != 'tag' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork) &&
+      (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
 
     steps:
       - name: Checkout source

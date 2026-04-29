@@ -24,6 +24,9 @@ concurrency:
 jobs:
   build:
     uses: docker/github-builder/.github/workflows/build.yml@v1
+    # Exclude 'push' events from the Merge Queue to avoid a race condition where
+    # the 'push' event might cancel the 'merge_group' event via the concurrency group.
+    if: (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
     permissions:
       contents: read
       packages: write
