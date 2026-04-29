@@ -30,6 +30,7 @@ jobs:
       id-token: write
       attestations: write
     with:
+      context: . # Use local checkout to support GitHub Merge Queue
       output: image
       platforms: linux/amd64,linux/arm64
       push: ${{ github.event_name != 'pull_request' }}
