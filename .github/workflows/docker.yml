@@ -18,14 +18,18 @@ on:
         default: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.merge_group.head_ref || github.ref }}
+  group: >-
+    ${{ github.workflow }}-
+    ${{ github.event.pull_request.number ||
+        (github.event_name == 'merge_group' && format('mq-{0}', github.event.merge_group.head_ref)) ||
+        github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     uses: docker/github-builder/.github/workflows/build.yml@v1
-    # Exclude 'push' events from the Merge Queue to avoid a race condition where
-    # the 'push' event might cancel the 'merge_group' event via the concurrency group.
+    # Exclude 'push' events on Merge Queue branches, as they are already
+    # handled by the 'merge_group' event.
     if: (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
     permissions:
       contents: read
