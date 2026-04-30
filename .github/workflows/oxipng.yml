@@ -9,11 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: >-
-    ${{ github.workflow }}-
-    ${{ github.event.pull_request.number ||
-        (github.event_name == 'merge_group' && format('mq-{0}', github.event.merge_group.head_ref)) ||
-        github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
