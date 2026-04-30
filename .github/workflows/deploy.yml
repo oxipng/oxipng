@@ -58,9 +58,9 @@ jobs:
 
       - name: Get the Oxipng version
         id: oxipngMeta
-        run:
-          echo "version=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "oxipng").version')"
-          >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "oxipng").version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Retrieve ${{ matrix.target }} binary
         uses: dawidd6/action-download-artifact@v20
