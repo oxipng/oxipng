@@ -36,7 +36,7 @@ jobs:
       context: . # Use local checkout to support GitHub Merge Queue
       output: image
       platforms: linux/amd64,linux/arm64
-      push: ${{ github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
+      push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
       cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       # We don't sign the image because ghcr.io doesn't support OCI Referrers API yet, and the fallback relies on pushing new tags on each build
       # https://github.com/docker/github-builder/issues/109#issuecomment-3885082486
