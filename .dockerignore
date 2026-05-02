@@ -1,4 +1,7 @@
-scripts
-.github
-.editorconfig
-.pre-commit-hooks.yaml
+/.editorconfig
+/.git/
+/.github/
+/.gitignore
+/.pre-commit-hooks.yaml
+/scripts/
+/target/

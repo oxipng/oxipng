@@ -5,6 +5,10 @@ on:
     tags:
       - "v*.*.*"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: write
@@ -54,15 +58,15 @@ jobs:
 
       - name: Get the Oxipng version
         id: oxipngMeta
-        run:
-          echo "version=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "oxipng").version')"
-          >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "oxipng").version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Retrieve ${{ matrix.target }} binary
         uses: dawidd6/action-download-artifact@v20
         with:
           workflow: oxipng.yml
-          commit: ${{ env.GITHUB_SHA }}
+          commit: ${{ github.sha }}
           name: Oxipng binary (${{ matrix.target }})
           path: target
 

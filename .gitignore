@@ -1,6 +1,6 @@
-target
 *.bk
-.DS_Store
 *.out.png
-/.idea
-/node_modules
+.DS_Store
+/.idea/
+/node_modules/
+/target/

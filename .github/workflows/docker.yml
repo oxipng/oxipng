@@ -6,9 +6,9 @@ on:
     tags:
       - 'v*.*.*'
   pull_request:
+  merge_group:
     types:
-      - opened
-      - synchronize
+      - checks_requested
   workflow_dispatch:
     inputs:
       use_cache:
@@ -17,18 +17,26 @@ on:
         type: boolean
         default: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     uses: docker/github-builder/.github/workflows/build.yml@v1
+    # Exclude 'push' events on Merge Queue branches, as they are already
+    # handled by the 'merge_group' event.
+    if: (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
     permissions:
       contents: read
       packages: write
       id-token: write
       attestations: write
     with:
+      context: . # Use local checkout to support GitHub Merge Queue
       output: image
       platforms: linux/amd64,linux/arm64
-      push: ${{ github.event_name != 'pull_request' }}
+      push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
       cache: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
       # We don't sign the image because ghcr.io doesn't support OCI Referrers API yet, and the fallback relies on pushing new tags on each build
       # https://github.com/docker/github-builder/issues/109#issuecomment-3885082486

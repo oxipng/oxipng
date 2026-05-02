@@ -3,10 +3,14 @@ name: oxipng
 on:
   push:
   pull_request:
+  merge_group:
     types:
-      - opened
-      - synchronize
+      - checks_requested
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
@@ -15,8 +19,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
 
-    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
-    if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
+    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit.
+    # We also exclude 'push' events on Merge Queue branches, as they are already
+    # handled by the 'merge_group' event.
+    if: >-
+      github.ref_type != 'tag' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork) &&
+      (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
 
     strategy:
       fail-fast: false
@@ -150,8 +159,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
-    if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
+    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit.
+    # We also exclude 'push' events on Merge Queue branches, as they are already
+    # handled by the 'merge_group' event.
+    if: >-
+      github.ref_type != 'tag' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork) &&
+      (!(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/gh-readonly-queue/')))
 
     steps:
       - name: Checkout source
