@@ -163,7 +163,9 @@ pub(crate) fn perform_reductions(
 
         // Attempt to sort the palette using the ezeng method
         if !deadline.passed() {
-            if let Some(reduced) = sorted_palette_ezeng(input) {
+            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
+            // better than the full 255 in some cases
+            if let Some(reduced) = sorted_palette_ezeng(input, 50) {
                 if let ColorType::Indexed { palette } = &reduced.ihdr.color_type {
                     if !palettes.contains(palette) {
                         palettes.push(palette.clone());

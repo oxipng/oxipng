@@ -153,7 +153,7 @@ pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
 
 /// Sort the colors in the palette using the ezeng technique, returning the sorted image if successful
 #[must_use]
-pub fn sorted_palette_ezeng(png: &PngImage) -> Option<PngImage> {
+pub fn sorted_palette_ezeng(png: &PngImage, max_swap_dist: u8) -> Option<PngImage> {
     // Interlacing not currently supported
     if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
         return None;
@@ -167,6 +167,9 @@ pub fn sorted_palette_ezeng(png: &PngImage) -> Option<PngImage> {
     let matrix = co_occurrence_matrix(palette.len(), png);
     let edges = weighted_edges(&matrix);
     let mut remapping = ezeng_reindex(edges, &matrix);
+
+    // Perform additional optimization with pairwise swaps
+    pairwise_swap_search(&mut remapping, &matrix, max_swap_dist);
 
     apply_most_popular_color(png, &mut remapping);
 
@@ -550,4 +553,43 @@ fn battiato_reindex(num_colors: usize, edges: Vec<(usize, usize)>) -> Vec<usize>
 
     // Return the completed chain
     chains.swap_remove(0)
+}
+
+// Pairwise swap: for each pair (a, b), swap if it reduces cost.
+// This is an effective means of refining the result of another algorithm. It's currently rather
+// brutish and not very efficient - there are probably ways it could be optimized, or perhaps the
+// ezeng algorithm could be modified to achieve a similar effect without needing this step at all.
+//
+// `max_dist` limits the distance between pairs to consider to keep it performant. A value of 1 is
+// quite fast and still provides a good improvement, but higher values can be a little better.
+fn pairwise_swap_search(remapping: &mut [usize], matrix: &[Vec<u32>], max_dist: u8) {
+    let num_colors = remapping.len();
+    let b_limit = max_dist as usize + 1;
+
+    // Keep iterating as long as at least two swaps were made
+    // When we're down to only one then the chance of any further improvement is practically nil
+    let mut swaps = 2;
+    while swaps >= 2 {
+        swaps = 0;
+        for a in 0..num_colors - 1 {
+            for b in (a + 1)..(a + b_limit).min(num_colors) {
+                let va = remapping[a];
+                let vb = remapping[b];
+                let mut delta: i64 = 0;
+                for (i, &vi) in remapping.iter().enumerate() {
+                    if i == a || i == b {
+                        continue;
+                    }
+                    let weight_diff = matrix[va][vi] as i64 - matrix[vb][vi] as i64;
+                    let dist_diff = (b as i64 - i as i64).unsigned_abs() as i64
+                        - (a as i64 - i as i64).unsigned_abs() as i64;
+                    delta += weight_diff * dist_diff;
+                }
+                if delta < 0 {
+                    remapping.swap(a, b);
+                    swaps += 1;
+                }
+            }
+        }
+    }
 }
