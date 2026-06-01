@@ -263,6 +263,16 @@ fn reductions_palette_sort_mzeng(b: &mut Bencher) {
 }
 
 #[bench]
+fn reductions_palette_sort_ezeng(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from(
+        "tests/files/palette_8_should_be_palette_8.png",
+    ));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+
+    b.iter(|| palette::sorted_palette_ezeng(&png.raw));
+}
+
+#[bench]
 fn reductions_palette_sort_battiato(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from(
         "tests/files/palette_8_should_be_palette_8.png",

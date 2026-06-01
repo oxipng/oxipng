@@ -161,13 +161,13 @@ pub(crate) fn perform_reductions(
             }
         }
 
-        // Attempt to sort the palette using the mzeng method
+        // Attempt to sort the palette using the ezeng method
         if !deadline.passed() {
-            if let Some(reduced) = sorted_palette_mzeng(input) {
+            if let Some(reduced) = sorted_palette_ezeng(input) {
                 if let ColorType::Indexed { palette } = &reduced.ihdr.color_type {
                     if !palettes.contains(palette) {
                         palettes.push(palette.clone());
-                        eval.try_image_with_description(Arc::new(reduced), "Indexed (mzeng sort)");
+                        eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
                         evaluation_added = true;
                     }
                 }
