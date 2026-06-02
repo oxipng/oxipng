@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{ColorType, Deadline, Deflater, Options, evaluate::Evaluator, png::PngImage};
+use crate::{Deadline, Deflater, Options, evaluate::Evaluator, png::PngImage};
 
 pub mod alpha;
 use crate::alpha::*;
@@ -134,45 +134,17 @@ pub(crate) fn perform_reductions(
         }
     }
 
-    // Attempt additional palette sorting techniques
-    if !cheap && opts.palette_reduction {
-        // Collect a list of palettes so we can avoid evaluating the same one twice
-        let mut palettes = Vec::new();
-        if let ColorType::Indexed { palette } = &baseline.ihdr.color_type {
-            palettes.push(palette.clone());
-        }
+    // Attempt to sort the palette using the ezeng method
+    if !cheap && opts.palette_reduction && !deadline.passed() {
         // Make sure we use the `indexed` var as input if it exists
-        // This one doesn't need to be kept in the palette list as the sorters will fail if there's no change
         let input = indexed.as_ref().unwrap_or(&png);
-
-        // Attempt to sort the palette using the battiato method
-        if !deadline.passed() {
-            if let Some(reduced) = sorted_palette_battiato(input) {
-                if let ColorType::Indexed { palette } = &reduced.ihdr.color_type {
-                    if !palettes.contains(palette) {
-                        palettes.push(palette.clone());
-                        eval.try_image_with_description(
-                            Arc::new(reduced),
-                            "Indexed (battiato sort)",
-                        );
-                        evaluation_added = true;
-                    }
-                }
-            }
-        }
-
-        // Attempt to sort the palette using the ezeng method
-        if !deadline.passed() {
-            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
-            // better than the full 255 in some cases
-            if let Some(reduced) = sorted_palette_ezeng(input, 50) {
-                if let ColorType::Indexed { palette } = &reduced.ihdr.color_type {
-                    if !palettes.contains(palette) {
-                        palettes.push(palette.clone());
-                        eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
-                        evaluation_added = true;
-                    }
-                }
+        // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
+        // better than the full 255 in some cases
+        if let Some(reduced) = sorted_palette_ezeng(input, 50) {
+            // Skip evaluation if the palette is the same as the baseline
+            if reduced.ihdr.color_type != baseline.ihdr.color_type {
+                eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
+                evaluation_added = true;
             }
         }
     }

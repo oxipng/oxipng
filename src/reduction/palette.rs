@@ -130,6 +130,7 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 }
 
 /// Sort the colors in the palette using the mzeng technique, returning the sorted image if successful
+// (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
 pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
@@ -177,6 +178,7 @@ pub fn sorted_palette_ezeng(png: &PngImage, max_swap_dist: u8) -> Option<PngImag
 }
 
 /// Sort the colors in the palette using the battiato technique, returning the sorted image if successful
+// (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
 pub fn sorted_palette_battiato(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
