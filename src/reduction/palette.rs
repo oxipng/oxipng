@@ -267,23 +267,30 @@ fn co_occurrence_matrix(num_colors: usize, png: &PngImage) -> Vec<Vec<u32>> {
     for line in png.scan_lines(false) {
         for i in 0..line.data.len() {
             let val = line.data[i] as usize;
-            if val > num_colors {
+            if val >= num_colors {
                 continue;
             }
             if let Some(prev_val) = prev_val.replace(val) {
                 matrix[prev_val][val] += 1;
-                matrix[val][prev_val] += 1;
             }
             if let Some(prev) = &prev {
                 let prev_val = prev.data[i] as usize;
-                if prev_val > num_colors {
+                if prev_val >= num_colors {
                     continue;
                 }
                 matrix[prev_val][val] += 1;
-                matrix[val][prev_val] += 1;
             }
         }
         prev = Some(line);
+    }
+
+    // Make the matrix symmetrical - this is faster to do afterward than maintaining symmetry during counting
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..num_colors {
+        for j in 0..num_colors {
+            matrix[j][i] += matrix[i][j];
+            matrix[i][j] = matrix[j][i];
+        }
     }
     matrix
 }
