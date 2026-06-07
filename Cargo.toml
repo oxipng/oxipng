@@ -44,7 +44,7 @@ env_logger = { version = "0.11.10", optional = true, default-features = false, f
 image = { version = "0.25.9", optional = true, default-features = false, features = ["png"] }
 indexmap = "2.14.0"
 libdeflater = "1.25.2"
-log = "0.4.30"
+log = "0.4.31"
 parse-size = { version = "1.1.0", optional = true }
 rayon = { version = "1.11.0", optional = true }
 rgb = "0.8.53"
