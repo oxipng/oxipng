@@ -130,6 +130,7 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 }
 
 /// Sort the colors in the palette using the mzeng technique, returning the sorted image if successful
+// (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
 pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
@@ -151,7 +152,33 @@ pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
     apply_palette_reorder(png, &remapping)
 }
 
+/// Sort the colors in the palette using the ezeng technique, returning the sorted image if successful
+#[must_use]
+pub fn sorted_palette_ezeng(png: &PngImage, max_swap_dist: u8) -> Option<PngImage> {
+    // Interlacing not currently supported
+    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
+        return None;
+    }
+    let palette = match &png.ihdr.color_type {
+        // Images with only two colors will remain unchanged from previous luma sort
+        ColorType::Indexed { palette } if palette.len() > 2 => palette,
+        _ => return None,
+    };
+
+    let matrix = co_occurrence_matrix(palette.len(), png);
+    let edges = weighted_edges(&matrix);
+    let mut remapping = ezeng_reindex(edges, &matrix);
+
+    // Perform additional optimization with pairwise swaps
+    pairwise_swap_search(&mut remapping, &matrix, max_swap_dist);
+
+    apply_most_popular_color(png, &mut remapping);
+
+    apply_palette_reorder(png, &remapping)
+}
+
 /// Sort the colors in the palette using the battiato technique, returning the sorted image if successful
+// (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
 pub fn sorted_palette_battiato(png: &PngImage) -> Option<PngImage> {
     // Interlacing not currently supported
@@ -267,23 +294,30 @@ fn co_occurrence_matrix(num_colors: usize, png: &PngImage) -> Vec<Vec<u32>> {
     for line in png.scan_lines(false) {
         for i in 0..line.data.len() {
             let val = line.data[i] as usize;
-            if val > num_colors {
+            if val >= num_colors {
                 continue;
             }
             if let Some(prev_val) = prev_val.replace(val) {
                 matrix[prev_val][val] += 1;
-                matrix[val][prev_val] += 1;
             }
             if let Some(prev) = &prev {
                 let prev_val = prev.data[i] as usize;
-                if prev_val > num_colors {
+                if prev_val >= num_colors {
                     continue;
                 }
                 matrix[prev_val][val] += 1;
-                matrix[val][prev_val] += 1;
             }
         }
         prev = Some(line);
+    }
+
+    // Make the matrix symmetrical - this is faster to do afterward than maintaining symmetry during counting
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..num_colors {
+        for j in 0..num_colors {
+            matrix[j][i] += matrix[i][j];
+            matrix[i][j] = matrix[j][i];
+        }
     }
     matrix
 }
@@ -337,6 +371,91 @@ fn mzeng_reindex(num_colors: usize, edges: Vec<(usize, usize)>, matrix: &[Vec<u3
         } else {
             remapping.push(best_index);
         }
+        // Remove best_sum from sums.
+        sums.swap_remove(best_sum_pos);
+        if !sums.is_empty() {
+            // Update all the sums and find the best one.
+            best_sum_pos = 0;
+            best_sum = (0, 0);
+            for (i, sum) in sums.iter_mut().enumerate() {
+                sum.1 += matrix[best_index][sum.0];
+                if sum.1 > best_sum.1 {
+                    best_sum_pos = i;
+                    best_sum = *sum;
+                }
+            }
+        }
+    }
+
+    // Return the completed remapping
+    remapping
+}
+
+// Apply a different version of Zeng's technique where the best index is inserted at a position
+// minimizing total cost increase, rather than just the ends. This version is significantly more
+// effective, but is more computationally expensive.
+// The "e" here could mean enhanced, extended, exhaustive, or perhaps elephant if you prefer.
+fn ezeng_reindex(edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> {
+    // Initialize the mapping list with the two best indices.
+    let mut remapping = vec![edges[0].0, edges[0].1];
+
+    // Initialize the sums with the first two remappings and find the best one
+    let mut sums = Vec::new();
+    let mut best_sum_pos = 0;
+    let mut best_sum = (0, 0);
+    for (i, m_row) in matrix.iter().enumerate() {
+        if i == remapping[0] || i == remapping[1] {
+            continue;
+        }
+        let sum = (i, m_row[remapping[0]] + m_row[remapping[1]]);
+        if sum.1 > best_sum.1 {
+            best_sum_pos = sums.len();
+            best_sum = sum;
+        }
+        sums.push(sum);
+    }
+
+    while !sums.is_empty() {
+        let best_index = best_sum.0;
+        // Try all insertion positions and pick the one minimizing total cost increase.
+        // The cost increase of inserting at position p has two components:
+        // 1. New element cost: Σ w(new, placed[k]) * distance(p, k_after_shift)
+        // 2. Cross-pair cost: Σ w(placed[a], placed[b]) for all pairs straddling p
+        //    (these pairs get pushed 1 unit farther apart by the insertion)
+        let m = remapping.len();
+        let mut best_pos = 0;
+        let mut best_cost = i64::MAX;
+        let mut cross_cost: i64 = 0;
+        for p in 0..=m {
+            // New element's weighted distance to all existing elements
+            let new_cost: i64 = (0..m)
+                .map(|k| {
+                    let dist = if k < p { p - k } else { k + 1 - p };
+                    matrix[best_index][remapping[k]] as i64 * dist as i64
+                })
+                .sum();
+
+            let total = new_cost + cross_cost;
+            if total < best_cost {
+                best_cost = total;
+                best_pos = p;
+            }
+
+            // Update cross_cost for position p+1:
+            // Element at position p moves from "right of split" to "left of split"
+            // cross_cost(p+1) - cross_cost(p) = Σ_{b>p} w(p,b) - Σ_{a<p} w(a,p)
+            if p < m {
+                let rp = remapping[p];
+                for b in (p + 1)..m {
+                    cross_cost += matrix[rp][remapping[b]] as i64;
+                }
+                for a in 0..p {
+                    cross_cost -= matrix[remapping[a]][rp] as i64;
+                }
+            }
+        }
+        remapping.insert(best_pos, best_index);
+
         // Remove best_sum from sums.
         sums.swap_remove(best_sum_pos);
         if !sums.is_empty() {
@@ -436,4 +555,43 @@ fn battiato_reindex(num_colors: usize, edges: Vec<(usize, usize)>) -> Vec<usize>
 
     // Return the completed chain
     chains.swap_remove(0)
+}
+
+// Pairwise swap: for each pair (a, b), swap if it reduces cost.
+// This is an effective means of refining the result of another algorithm. It's currently rather
+// brutish and not very efficient - there are probably ways it could be optimized, or perhaps the
+// ezeng algorithm could be modified to achieve a similar effect without needing this step at all.
+//
+// `max_dist` limits the distance between pairs to consider to keep it performant. A value of 1 is
+// quite fast and still provides a good improvement, but higher values can be a little better.
+fn pairwise_swap_search(remapping: &mut [usize], matrix: &[Vec<u32>], max_dist: u8) {
+    let num_colors = remapping.len();
+    let b_limit = max_dist as usize + 1;
+
+    // Keep iterating as long as at least two swaps were made
+    // When we're down to only one then the chance of any further improvement is practically nil
+    let mut swaps = 2;
+    while swaps >= 2 {
+        swaps = 0;
+        for a in 0..num_colors - 1 {
+            for b in (a + 1)..(a + b_limit).min(num_colors) {
+                let va = remapping[a];
+                let vb = remapping[b];
+                let mut delta: i64 = 0;
+                for (i, &vi) in remapping.iter().enumerate() {
+                    if i == a || i == b {
+                        continue;
+                    }
+                    let weight_diff = matrix[va][vi] as i64 - matrix[vb][vi] as i64;
+                    let dist_diff = (b as i64 - i as i64).unsigned_abs() as i64
+                        - (a as i64 - i as i64).unsigned_abs() as i64;
+                    delta += weight_diff * dist_diff;
+                }
+                if delta < 0 {
+                    remapping.swap(a, b);
+                    swaps += 1;
+                }
+            }
+        }
+    }
 }
