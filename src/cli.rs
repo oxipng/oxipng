@@ -19,10 +19,10 @@ pub fn build_command() -> Command {
     // so that they can fit on a single line in an 80 character terminal.
     // Long help descriptions are soft wrapped here at 90 characters (column 91) but this does not
     // affect output, it simply matches what is rendered when help is output to a file.
-    Command::new("oxipng")
+    Command::new(env!("CARGO_PKG_NAME"))
         .version(env!("CARGO_PKG_VERSION"))
-        .author("Joshua Holmer <jholmer.in@gmail.com>")
-        .about("Losslessly improve compression of PNG files")
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .styles(STYLES)
         .arg(
             Arg::new("files")

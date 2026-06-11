@@ -79,7 +79,12 @@ fn main() -> ExitCode {
         )
     };
 
+    // Include version info in verbose output
     let is_verbose = matches.get_count("verbose") > 0;
+    if is_verbose && !using_stdout {
+        println!("{} {}\n", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    }
+
     let print_summary = !matches.get_flag("quiet") && !using_stdout;
     let print_progress = print_summary && !is_verbose && stdout().is_terminal();
     let total_files = files.len();
