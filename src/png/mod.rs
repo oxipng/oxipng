@@ -385,11 +385,8 @@ impl PngImage {
             // Alpha optimisation may alter the line data, so we need a mutable copy of it
             let mut line_data = line.data.to_vec();
 
-            if let FilterStrategy::Basic(mut filter) = strategy {
+            if let FilterStrategy::Basic(filter) = strategy {
                 // Standard filters
-                if prev_pass != line.pass && filter > RowFilter::Sub {
-                    filter = RowFilter::None;
-                }
                 filter.filter_line(bpp, &mut line_data, &prev_line, &mut f_buf, alpha_bytes);
                 filtered.extend_from_slice(&f_buf);
                 prev_line = line_data;
@@ -414,12 +411,7 @@ impl PngImage {
 
                 let mut best_line = Vec::new();
                 let mut best_line_raw = Vec::new();
-                // Avoid vertical filtering on first line of each interlacing pass
-                let try_filters = if prev_pass == line.pass {
-                    RowFilter::ALL.iter()
-                } else {
-                    RowFilter::SINGLE_LINE.iter()
-                };
+                let try_filters = RowFilter::ALL.iter();
                 match strategy {
                     FilterStrategy::MinSum => {
                         // MSAD algorithm mentioned in libpng reference docs
