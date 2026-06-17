@@ -401,8 +401,8 @@ fn optimize_raw(
         _ => 8,
     };
     let eval_deflater = Deflater::Libdeflater { compression };
-    // If only one filter is selected, use this for evaluations
-    let eval_filters = if opts.filters.len() == 1 {
+    let eval_filters = if opts.filters.len() <= 2 {
+        // If only one or two filters are given, use them for evaluations
         opts.filters.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
@@ -517,18 +517,6 @@ fn perform_trials(
     }
 
     // Perform full compression trials of selected filters and determine the best
-
-    if filters.is_empty() {
-        // Pick a filter automatically
-        if image.ihdr.bit_depth as u8 >= 8 {
-            // Bigrams is the best all-rounder when there's at least one byte per pixel
-            filters.insert(FilterStrategy::Bigrams);
-        } else {
-            // Otherwise delta filters generally don't work well, so just stick with None
-            filters.insert(FilterStrategy::NONE);
-        }
-    }
-
     debug!("Trying {} filters with {}", filters.len(), opts.deflater);
     let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
     if let Some(max_size) = max_size {
