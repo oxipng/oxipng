@@ -101,7 +101,6 @@ impl RowFilter {
             self.optimize_alpha(bpp, data, prev_line, bpp - alpha_bytes);
         }
 
-        buf.clear();
         buf.reserve(data.len() + 1);
         buf.push(self as u8);
         match self {
@@ -225,17 +224,19 @@ impl RowFilter {
         prev_line: &[u8],
         buf: &mut Vec<u8>,
     ) {
-        buf.clear();
-        buf.reserve(data.len());
         assert!(data.len() >= bpp);
         assert_eq!(data.len(), prev_line.len());
+        let offset = buf.len();
+        buf.reserve(data.len());
         match self {
             Self::None => {
                 buf.extend_from_slice(data);
             }
             Self::Sub => {
                 for (i, &cur) in data.iter().enumerate() {
-                    let prev_byte = i.checked_sub(bpp).and_then(|x| buf.get(x).copied());
+                    let prev_byte = i
+                        .checked_sub(bpp)
+                        .and_then(|x| buf.get(offset + x).copied());
                     buf.push(prev_byte.map_or(cur, |b| cur.wrapping_add(b)));
                 }
             }
@@ -248,7 +249,9 @@ impl RowFilter {
             }
             Self::Average => {
                 for (i, (&cur, &last)) in data.iter().zip(prev_line).enumerate() {
-                    let prev_byte = i.checked_sub(bpp).and_then(|x| buf.get(x).copied());
+                    let prev_byte = i
+                        .checked_sub(bpp)
+                        .and_then(|x| buf.get(offset + x).copied());
                     buf.push(cur.wrapping_add(prev_byte.map_or_else(
                         || last >> 1,
                         |b| ((u16::from(b) + u16::from(last)) >> 1) as u8,
@@ -260,7 +263,7 @@ impl RowFilter {
                     buf.push(
                         match i
                             .checked_sub(bpp)
-                            .map(|x| (buf.get(x).copied(), prev_line.get(x).copied()))
+                            .map(|x| (buf.get(offset + x).copied(), prev_line.get(x).copied()))
                         {
                             Some((Some(left), Some(left_up))) => {
                                 cur.wrapping_add(paeth_predictor(left, up, left_up))
