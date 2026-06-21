@@ -32,10 +32,10 @@ impl Deflater {
             #[cfg(feature = "zopfli")]
             Self::Zopfli(options) => zopfli_deflate(data, options)?,
         };
-        if let Some(max) = max_size {
-            if compressed.len() > max {
-                return Err(PngError::DeflatedDataTooLong(max));
-            }
+        if let Some(max) = max_size
+            && compressed.len() > max
+        {
+            return Err(PngError::DeflatedDataTooLong(max));
         }
         Ok(compressed)
     }
