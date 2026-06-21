@@ -122,14 +122,14 @@ impl StrategyEvaluator for EntropyEvaluator {
         let mut hist1 = [0_u32; 0x100];
         let mut hist2 = [0_u32; 0x100];
         let mut hist3 = [0_u32; 0x100];
-        let mut chunks = output[offset..].chunks_exact(4);
-        for chunk in &mut chunks {
+        let (chunks, remainder) = output[offset..].as_chunks::<4>();
+        for chunk in chunks {
             hist0[chunk[0] as usize] += 1;
             hist1[chunk[1] as usize] += 1;
             hist2[chunk[2] as usize] += 1;
             hist3[chunk[3] as usize] += 1;
         }
-        for &i in chunks.remainder() {
+        for &i in remainder {
             hist0[i as usize] += 1;
         }
 

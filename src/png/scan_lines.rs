@@ -63,7 +63,7 @@ struct ScanLineRanges {
 }
 
 impl ScanLineRanges {
-    pub fn new(png: &PngImage, has_filter: bool) -> Self {
+    pub const fn new(png: &PngImage, has_filter: bool) -> Self {
         Self {
             bits_per_pixel: png.ihdr.bpp(),
             width: png.ihdr.width,

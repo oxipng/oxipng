@@ -15,14 +15,14 @@ pub fn reduced_bit_depth_16_to_8(png: &PngImage, force_scale: bool) -> Option<Pn
         return scaled_bit_depth_16_to_8(png);
     }
 
-    // Reduce from 16 to 8 bits per channel per pixel
-    if png.data.chunks_exact(2).any(|pair| pair[0] != pair[1]) {
+    let pixels = png.data.as_chunks::<2>().0;
+    if pixels.iter().any(|pair| pair[0] != pair[1]) {
         // Can't reduce
         return None;
     }
 
     Some(PngImage {
-        data: png.data.chunks_exact(2).map(|pair| pair[0]).collect(),
+        data: pixels.iter().map(|pair| pair[0]).collect(),
         ihdr: IhdrData {
             color_type: png.ihdr.color_type.clone(),
             bit_depth: BitDepth::Eight,
@@ -39,9 +39,9 @@ pub fn scaled_bit_depth_16_to_8(png: &PngImage) -> Option<PngImage> {
     }
 
     // Reduce from 16 to 8 bits per channel per pixel by scaling when necessary
-    let data = png
-        .data
-        .chunks_exact(2)
+    let pixels = png.data.as_chunks::<2>().0;
+    let data = pixels
+        .iter()
         .map(|pair| {
             if pair[0] == pair[1] {
                 return pair[0];
