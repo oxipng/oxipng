@@ -103,13 +103,11 @@ impl StrategyEvaluator for MinSumEvaluator {
 // Shannon entropy algorithm, from LodePNG
 // https://github.com/lvandeve/lodepng
 struct EntropyEvaluator {
-    counts: [u32; 0x100],
     best_size: i32,
 }
 impl EntropyEvaluator {
     const fn new() -> Self {
         Self {
-            counts: [0; 0x100],
             best_size: i32::MIN,
         }
     }
@@ -119,11 +117,24 @@ impl StrategyEvaluator for EntropyEvaluator {
         self.best_size = i32::MIN;
     }
     fn evaluate(&mut self, output: &[u8], offset: usize) -> bool {
-        self.counts.fill(0);
-        for &i in &output[offset..] {
-            self.counts[i as usize] += 1;
+        // SIMD-friendly histogram construction
+        let mut hist0 = [0_u32; 0x100];
+        let mut hist1 = [0_u32; 0x100];
+        let mut hist2 = [0_u32; 0x100];
+        let mut hist3 = [0_u32; 0x100];
+        let mut chunks = output[offset..].chunks_exact(4);
+        for chunk in &mut chunks {
+            hist0[chunk[0] as usize] += 1;
+            hist1[chunk[1] as usize] += 1;
+            hist2[chunk[2] as usize] += 1;
+            hist3[chunk[3] as usize] += 1;
         }
-        let size = self.counts.iter().fold(0, |acc, &x| {
+        for &i in chunks.remainder() {
+            hist0[i as usize] += 1;
+        }
+
+        let size = (0..0x100).fold(0, |acc, i| {
+            let x = hist0[i] + hist1[i] + hist2[i] + hist3[i];
             if x == 0 {
                 return acc;
             }
