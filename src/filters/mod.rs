@@ -1,50 +1,7 @@
 use std::{fmt, fmt::Display, mem::transmute};
 
-/// Filtering strategy for use in [`Options`][crate::Options]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum FilterStrategy {
-    /// Same filter for all rows
-    Basic(RowFilter),
-    /// Minimum sum of absolute differences
-    MinSum,
-    /// Shannon entropy
-    Entropy,
-    /// Count of distinct bigrams
-    Bigrams,
-    /// Shannon entropy of bigrams
-    BigEnt,
-    /// Deflate compression
-    Brute {
-        /// The number of lines to compress at once
-        num_lines: usize,
-        /// The compression level to use (1-12)
-        level: u8,
-    },
-    /// Predefined filter for each row
-    Predefined(Vec<RowFilter>),
-}
-
-impl FilterStrategy {
-    pub const NONE: Self = Self::Basic(RowFilter::None);
-    pub const SUB: Self = Self::Basic(RowFilter::Sub);
-    pub const UP: Self = Self::Basic(RowFilter::Up);
-    pub const AVERAGE: Self = Self::Basic(RowFilter::Average);
-    pub const PAETH: Self = Self::Basic(RowFilter::Paeth);
-}
-
-impl Display for FilterStrategy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Basic(filter) => filter.fmt(f),
-            Self::MinSum => "MinSum".fmt(f),
-            Self::Entropy => "Entropy".fmt(f),
-            Self::Bigrams => "Bigrams".fmt(f),
-            Self::BigEnt => "BigEnt".fmt(f),
-            Self::Brute { .. } => "Brute".fmt(f),
-            Self::Predefined(_) => "Predefined".fmt(f),
-        }
-    }
-}
+mod strategies;
+pub use strategies::FilterStrategy;
 
 /// PNG delta filters
 #[repr(u8)]

@@ -1,8 +1,6 @@
-use std::{fs, path::Path, sync::Arc};
-
-use libdeflater::{CompressionLvl, Compressor};
 use log::warn;
 use rustc_hash::FxHashMap;
+use std::{fs, path::Path, sync::Arc};
 
 use crate::{
     Options, PngResult,
@@ -368,12 +366,7 @@ impl PngImage {
         let mut prev_pass: Option<u8> = None;
         // For heuristic strategies, keep track of the actual filter used for each line
         let mut filters_used = Vec::new();
-        // Pre-allocate buffers for the Bigrams strategy to avoid per-line allocations
-        let (mut bigram_seen, mut bigram_touched) = if matches!(strategy, FilterStrategy::Bigrams) {
-            (vec![false; 0x10000], Vec::<u16>::new())
-        } else {
-            (Vec::new(), Vec::new())
-        };
+        let mut strategy_evaluator = strategy.evaluator();
         for (i, line) in self.scan_lines(false).enumerate() {
             if prev_pass != line.pass || prev_line.is_empty() {
                 prev_line = vec![0; line.data.len()];
@@ -406,134 +399,20 @@ impl PngImage {
                 continue;
             }
 
-            let mut best_line = vec![0; line_data.len() + 1];
-            let mut best_line_raw = Vec::with_capacity(line_data.len());
+            let line_len = line.data.len() + 1;
+            let mut best_line = vec![0; line_len];
+            let mut best_line_raw = Vec::with_capacity(line.data.len());
             let offset = output.len();
-            match strategy {
-                FilterStrategy::MinSum => {
-                    // MSAD algorithm mentioned in libpng reference docs
-                    // http://www.libpng.org/pub/png/book/chapter09.html
-                    let mut best_size = usize::MAX;
-                    for f in RowFilter::ALL {
-                        f.filter_line(bpp, &mut line_data, &prev_line, &mut output, alpha_bytes);
-                        let size = output[offset..].iter().fold(0, |acc, &x| {
-                            let signed = x as i8;
-                            acc + signed.unsigned_abs() as usize
-                        });
-                        if size < best_size {
-                            best_size = size;
-                            best_line.clone_from_slice(&output[offset..]);
-                            best_line_raw.clone_from(&line_data);
-                            best_filter = f;
-                        }
-                        output.truncate(offset);
-                    }
+            let evaluator = strategy_evaluator.as_mut().unwrap();
+            evaluator.reset(line_len);
+            for f in RowFilter::ALL {
+                f.filter_line(bpp, &mut line_data, &prev_line, &mut output, alpha_bytes);
+                if evaluator.evaluate(&output, offset) {
+                    best_line.clone_from_slice(&output[offset..]);
+                    best_line_raw.clone_from(&line_data);
+                    best_filter = f;
                 }
-                FilterStrategy::Entropy => {
-                    // Shannon entropy algorithm, from LodePNG
-                    // https://github.com/lvandeve/lodepng
-                    let mut best_size = i32::MIN;
-                    for f in RowFilter::ALL {
-                        f.filter_line(bpp, &mut line_data, &prev_line, &mut output, alpha_bytes);
-                        let mut counts = vec![0; 0x100];
-                        for &i in &output[offset..] {
-                            counts[i as usize] += 1;
-                        }
-                        let size = counts.into_iter().fold(0, |acc, x| {
-                            if x == 0 {
-                                return acc;
-                            }
-                            acc + ilog2i(x)
-                        }) as i32;
-                        if size > best_size {
-                            best_size = size;
-                            best_line.clone_from_slice(&output[offset..]);
-                            best_line_raw.clone_from(&line_data);
-                            best_filter = f;
-                        }
-                        output.truncate(offset);
-                    }
-                }
-                FilterStrategy::Bigrams => {
-                    // Count distinct bigrams, from pngwolf
-                    // https://bjoern.hoehrmann.de/pngwolf/
-                    let mut best_size = usize::MAX;
-                    for f in RowFilter::ALL {
-                        f.filter_line(bpp, &mut line_data, &prev_line, &mut output, alpha_bytes);
-                        let mut count = 0;
-                        for pair in output[offset..].windows(2) {
-                            let bigram = ((pair[0] as usize) << 8) | pair[1] as usize;
-                            if !bigram_seen[bigram] {
-                                count += 1;
-                                if count >= best_size {
-                                    break;
-                                }
-                                bigram_seen[bigram] = true;
-                                bigram_touched.push(bigram as u16);
-                            }
-                        }
-                        // Clear only the entries that were touched
-                        for &idx in &bigram_touched {
-                            bigram_seen[idx as usize] = false;
-                        }
-                        bigram_touched.clear();
-                        if count < best_size {
-                            best_size = count;
-                            best_line.clone_from_slice(&output[offset..]);
-                            best_line_raw.clone_from(&line_data);
-                            best_filter = f;
-                        }
-                        output.truncate(offset);
-                    }
-                }
-                FilterStrategy::BigEnt => {
-                    // Bigram entropy, combined from Entropy and Bigrams filters
-                    let mut best_size = i32::MIN;
-                    // FxHasher is the fastest rust hasher currently available for this purpose
-                    let mut counts = FxHashMap::<u16, u32>::default();
-                    for f in RowFilter::ALL {
-                        f.filter_line(bpp, &mut line_data, &prev_line, &mut output, alpha_bytes);
-                        counts.clear();
-                        for pair in output[offset..].windows(2) {
-                            let bigram = (u16::from(pair[0]) << 8) | u16::from(pair[1]);
-                            counts.entry(bigram).and_modify(|e| *e += 1).or_insert(1);
-                        }
-                        let size = counts.values().fold(0, |acc, &x| acc + ilog2i(x)) as i32;
-                        if size > best_size {
-                            best_size = size;
-                            best_line.clone_from_slice(&output[offset..]);
-                            best_line_raw.clone_from(&line_data);
-                            best_filter = f;
-                        }
-                        output.truncate(offset);
-                    }
-                }
-                FilterStrategy::Brute { num_lines, level } => {
-                    // Brute force by compressing each filter attempt
-                    // Similar to that of LodePNG but includes some previous lines for context
-                    let mut best_size = usize::MAX;
-                    let line_len = line.data.len() + 1;
-                    let mut compressor =
-                        Compressor::new(CompressionLvl::new(level.into()).unwrap());
-                    let limit = (offset + line_len).min(line_len * num_lines);
-                    let capacity = compressor.deflate_compress_bound(limit);
-                    let mut dest = vec![0; capacity];
-
-                    for f in RowFilter::ALL {
-                        f.filter_line(bpp, &mut line_data, &prev_line, &mut output, alpha_bytes);
-                        let size = compressor
-                            .deflate_compress(&output[output.len() - limit..], &mut dest)
-                            .unwrap_or(usize::MAX);
-                        if size < best_size {
-                            best_size = size;
-                            best_line.clone_from_slice(&output[offset..]);
-                            best_line_raw.clone_from(&line_data);
-                            best_filter = f;
-                        }
-                        output.truncate(offset);
-                    }
-                }
-                _ => unreachable!(),
+                output.truncate(offset);
             }
             output.extend_from_slice(&best_line);
             prev_line = best_line_raw;
@@ -557,10 +436,4 @@ fn write_png_block(key: &[u8], chunk: &[u8], output: &mut Vec<u8>) {
     let crc = deflate::crc32(&chunk_data);
     output.append(&mut chunk_data);
     output.extend_from_slice(&crc.to_be_bytes());
-}
-
-// Integer approximation for i * log2(i) - much faster than float calculations
-const fn ilog2i(i: u32) -> u32 {
-    let log = 32 - i.leading_zeros() - 1;
-    i * log + ((i - (1 << log)) << 1)
 }
