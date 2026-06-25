@@ -577,15 +577,25 @@ fn pairwise_swap_search(remapping: &mut [usize], matrix: &[Vec<u32>], max_dist: 
             for b in (a + 1)..(a + b_limit).min(num_colors) {
                 let va = remapping[a];
                 let vb = remapping[b];
+                let row_a = &matrix[va];
+                let row_b = &matrix[vb];
                 let mut delta: i64 = 0;
-                for (i, &vi) in remapping.iter().enumerate() {
-                    if i == a || i == b {
-                        continue;
-                    }
-                    let weight_diff = matrix[va][vi] as i64 - matrix[vb][vi] as i64;
-                    let dist_diff = (b as i64 - i as i64).unsigned_abs() as i64
-                        - (a as i64 - i as i64).unsigned_abs() as i64;
+                // Dist diff is calculated as: (b - i).abs() - (a - i).abs()
+                // Split by index ranges so we can simplify the calculation and avoid checks to skip a and b
+                let dist = (b - a) as i64;
+                for &vi in &remapping[..a] {
+                    let weight_diff = row_a[vi] as i64 - row_b[vi] as i64;
+                    delta += weight_diff * dist;
+                }
+                for (off, &vi) in remapping[(a + 1)..b].iter().enumerate() {
+                    let i = (a + 1 + off) as i64;
+                    let weight_diff = row_a[vi] as i64 - row_b[vi] as i64;
+                    let dist_diff = (a + b) as i64 - 2 * i;
                     delta += weight_diff * dist_diff;
+                }
+                for &vi in &remapping[(b + 1)..] {
+                    let weight_diff = row_a[vi] as i64 - row_b[vi] as i64;
+                    delta -= weight_diff * dist;
                 }
                 if delta < 0 {
                     remapping.swap(a, b);
