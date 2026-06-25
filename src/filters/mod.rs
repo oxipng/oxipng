@@ -81,20 +81,31 @@ impl RowFilter {
                 );
             }
             Self::Average => {
-                for (i, byte) in data.iter().enumerate() {
-                    buf.push(byte.wrapping_sub(i.checked_sub(bpp).map_or_else(
-                        || prev_line[i] >> 1,
-                        |x| ((u16::from(data[x]) + u16::from(prev_line[i])) >> 1) as u8,
-                    )));
-                }
+                buf.extend(
+                    data.iter()
+                        .zip(prev_line.iter())
+                        .take(bpp)
+                        .map(|(cur, &up)| cur.wrapping_sub(up >> 1)),
+                );
+                buf.extend(data.iter().enumerate().skip(bpp).map(|(i, &cur)| {
+                    let left = data[i - bpp];
+                    let up = prev_line[i];
+                    cur.wrapping_sub(((u16::from(left) + u16::from(up)) >> 1) as u8)
+                }));
             }
             Self::Paeth => {
-                for (i, byte) in data.iter().enumerate() {
-                    buf.push(byte.wrapping_sub(i.checked_sub(bpp).map_or_else(
-                        || prev_line[i],
-                        |x| paeth_predictor(data[x], prev_line[i], prev_line[x]),
-                    )));
-                }
+                buf.extend(
+                    data.iter()
+                        .zip(prev_line.iter())
+                        .take(bpp)
+                        .map(|(cur, &up)| cur.wrapping_sub(up)),
+                );
+                buf.extend(data.iter().enumerate().skip(bpp).map(|(i, &cur)| {
+                    let left = data[i - bpp];
+                    let up = prev_line[i];
+                    let left_up = prev_line[i - bpp];
+                    cur.wrapping_sub(paeth_predictor(left, up, left_up))
+                }));
             }
         }
     }
@@ -190,11 +201,10 @@ impl RowFilter {
                 buf.extend_from_slice(data);
             }
             Self::Sub => {
-                for (i, &cur) in data.iter().enumerate() {
-                    let prev_byte = i
-                        .checked_sub(bpp)
-                        .and_then(|x| buf.get(offset + x).copied());
-                    buf.push(prev_byte.map_or(cur, |b| cur.wrapping_add(b)));
+                buf.extend_from_slice(&data[0..bpp]);
+                for i in bpp..data.len() {
+                    let left = buf[offset + i - bpp];
+                    buf.push(data[i].wrapping_add(left));
                 }
             }
             Self::Up => {
@@ -205,29 +215,24 @@ impl RowFilter {
                 );
             }
             Self::Average => {
-                for (i, (&cur, &last)) in data.iter().zip(prev_line).enumerate() {
-                    let prev_byte = i
-                        .checked_sub(bpp)
-                        .and_then(|x| buf.get(offset + x).copied());
-                    buf.push(cur.wrapping_add(prev_byte.map_or_else(
-                        || last >> 1,
-                        |b| ((u16::from(b) + u16::from(last)) >> 1) as u8,
-                    )));
+                for (cur, &up) in data.iter().take(bpp).zip(prev_line.iter().take(bpp)) {
+                    buf.push(cur.wrapping_add(up >> 1));
+                }
+                for i in bpp..data.len() {
+                    let left = buf[offset + i - bpp];
+                    let up = prev_line[i];
+                    buf.push(data[i].wrapping_add(((u16::from(left) + u16::from(up)) >> 1) as u8));
                 }
             }
             Self::Paeth => {
-                for (i, (&cur, &up)) in data.iter().zip(prev_line).enumerate() {
-                    buf.push(
-                        match i
-                            .checked_sub(bpp)
-                            .map(|x| (buf.get(offset + x).copied(), prev_line.get(x).copied()))
-                        {
-                            Some((Some(left), Some(left_up))) => {
-                                cur.wrapping_add(paeth_predictor(left, up, left_up))
-                            }
-                            _ => cur.wrapping_add(up),
-                        },
-                    );
+                for (cur, &up) in data.iter().take(bpp).zip(prev_line.iter().take(bpp)) {
+                    buf.push(cur.wrapping_add(up));
+                }
+                for i in bpp..data.len() {
+                    let left = buf[offset + i - bpp];
+                    let up = prev_line[i];
+                    let left_up = prev_line[i - bpp];
+                    buf.push(data[i].wrapping_add(paeth_predictor(left, up, left_up)));
                 }
             }
         }
