@@ -153,7 +153,6 @@ pub fn sorted_palette_ezeng(
 }
 
 /// Sort the colors in the palette using the battiato technique, returning the sorted image if successful
-// (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
 pub fn sorted_palette_battiato(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
     let mut remapping = battiato_reindex(matrix);

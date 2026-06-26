@@ -150,19 +150,35 @@ pub(crate) fn perform_reductions(
         None
     };
 
-    // Attempt to sort the palette using the ezeng method
+    // Attempt additional palette sorting techniques
     if effort >= 3 && opts.palette_reduction && !deadline.passed() {
+        // Collect a list of palettes so we can avoid evaluating the same one twice
+        let mut palettes = vec![baseline.ihdr.color_type.clone()];
         // Make sure we use the `indexed` var as input if it exists
+        // This one doesn't need to be kept in the palette list as the sorters will fail if there's no change
         let input = indexed.as_ref().unwrap_or(&png);
         if let Some(matrix) = CoOccurrenceMatrix::from(input) {
-            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
-            // better than the full 255 in some cases
-            if let Some(reduced) = sorted_palette_ezeng(input, &matrix, 50) {
-                // Skip evaluation if the palette is the same as the baseline
-                if reduced.ihdr.color_type != baseline.ihdr.color_type {
-                    eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
-                    evaluation_added = true;
-                }
+            // Attempt to sort the palette using the ezeng method
+            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually
+            // be better than the full 255 in some cases
+            if !deadline.passed()
+                && let Some(reduced) = sorted_palette_ezeng(input, &matrix, 50)
+                && !palettes.contains(&reduced.ihdr.color_type)
+            {
+                palettes.push(reduced.ihdr.color_type.clone());
+                eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
+                evaluation_added = true;
+            }
+
+            // Attempt to sort the palette using the battiato method
+            if effort >= 4
+                && !deadline.passed()
+                && let Some(reduced) = sorted_palette_battiato(input, &matrix)
+                && !palettes.contains(&reduced.ihdr.color_type)
+            {
+                palettes.push(reduced.ihdr.color_type.clone());
+                eval.try_image_with_description(Arc::new(reduced), "Indexed (battiato sort)");
+                evaluation_added = true;
             }
         }
     }
