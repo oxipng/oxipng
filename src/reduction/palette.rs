@@ -134,7 +134,8 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 #[must_use]
 pub fn sorted_palette_mzeng(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
     let mut remapping = mzeng_reindex(matrix);
-    apply_most_popular_color(png, &mut remapping, matrix);
+    // Put the most popular color first, but only if covers at least 15% of the image
+    apply_most_popular_color(&mut remapping, matrix, png.data.len() * 3 / 20);
     apply_palette_reorder(png, &remapping)
 }
 
@@ -148,7 +149,8 @@ pub fn sorted_palette_ezeng(
     let mut remapping = ezeng_reindex(matrix);
     // Perform additional optimization with pairwise swaps
     pairwise_swap_search(&mut remapping, matrix, max_swap_dist);
-    apply_most_popular_color(png, &mut remapping, matrix);
+    // Put the most popular color first, but only if covers at least 15% of the image
+    apply_most_popular_color(&mut remapping, matrix, png.data.len() * 3 / 20);
     apply_palette_reorder(png, &remapping)
 }
 
@@ -156,7 +158,8 @@ pub fn sorted_palette_ezeng(
 #[must_use]
 pub fn sorted_palette_battiato(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
     let mut remapping = battiato_reindex(matrix);
-    apply_most_popular_color(png, &mut remapping, matrix);
+    // Always put the most popular color first (this helps increase diversity vs zeng)
+    apply_most_popular_color(&mut remapping, matrix, 0);
     apply_palette_reorder(png, &remapping)
 }
 
@@ -215,11 +218,10 @@ fn most_popular_edge_color(num_colors: usize, png: &PngImage) -> Option<usize> {
     Some(max.0)
 }
 
-// Put the most popular color first
-fn apply_most_popular_color(png: &PngImage, remapping: &mut [usize], matrix: &CoOccurrenceMatrix) {
+// Put the most popular color first, if it meets a minmum threshold
+fn apply_most_popular_color(remapping: &mut [usize], matrix: &CoOccurrenceMatrix, min: usize) {
     let most_popular = matrix.most_popular_color();
-    // If the most popular color is less than 15% of the image, don't use it
-    if most_popular.1 < png.data.len() as u32 * 3 / 20 {
+    if most_popular.1 < min as u32 {
         return;
     }
     let first_idx = remapping.iter().position(|&i| i == most_popular.0).unwrap();
