@@ -138,13 +138,15 @@ pub(crate) fn perform_reductions(
     if !cheap && opts.palette_reduction && !deadline.passed() {
         // Make sure we use the `indexed` var as input if it exists
         let input = indexed.as_ref().unwrap_or(&png);
-        // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
-        // better than the full 255 in some cases
-        if let Some(reduced) = sorted_palette_ezeng(input, 50) {
-            // Skip evaluation if the palette is the same as the baseline
-            if reduced.ihdr.color_type != baseline.ihdr.color_type {
-                eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
-                evaluation_added = true;
+        if let Some(matrix) = CoOccurrenceMatrix::from(input) {
+            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
+            // better than the full 255 in some cases
+            if let Some(reduced) = sorted_palette_ezeng(input, &matrix, 50) {
+                // Skip evaluation if the palette is the same as the baseline
+                if reduced.ihdr.color_type != baseline.ihdr.color_type {
+                    eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
+                    evaluation_added = true;
+                }
             }
         }
     }

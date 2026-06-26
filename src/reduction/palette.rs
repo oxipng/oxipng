@@ -132,68 +132,32 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 /// Sort the colors in the palette using the mzeng technique, returning the sorted image if successful
 // (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
-pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
-    // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
-        return None;
-    }
-    let palette = match &png.ihdr.color_type {
-        // Images with only two colors will remain unchanged from previous luma sort
-        ColorType::Indexed { palette } if palette.len() > 2 => palette,
-        _ => return None,
-    };
-
-    let matrix = CoOccurrenceMatrix::new(palette.len(), png);
-    let mut remapping = mzeng_reindex(&matrix);
-
-    apply_most_popular_color(png, &mut remapping, &matrix);
-
+pub fn sorted_palette_mzeng(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
+    let mut remapping = mzeng_reindex(matrix);
+    apply_most_popular_color(png, &mut remapping, matrix);
     apply_palette_reorder(png, &remapping)
 }
 
 /// Sort the colors in the palette using the ezeng technique, returning the sorted image if successful
 #[must_use]
-pub fn sorted_palette_ezeng(png: &PngImage, max_swap_dist: u8) -> Option<PngImage> {
-    // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
-        return None;
-    }
-    let palette = match &png.ihdr.color_type {
-        // Images with only two colors will remain unchanged from previous luma sort
-        ColorType::Indexed { palette } if palette.len() > 2 => palette,
-        _ => return None,
-    };
-
-    let matrix = CoOccurrenceMatrix::new(palette.len(), png);
-    let mut remapping = ezeng_reindex(&matrix);
-
+pub fn sorted_palette_ezeng(
+    png: &PngImage,
+    matrix: &CoOccurrenceMatrix,
+    max_swap_dist: u8,
+) -> Option<PngImage> {
+    let mut remapping = ezeng_reindex(matrix);
     // Perform additional optimization with pairwise swaps
-    pairwise_swap_search(&mut remapping, &matrix, max_swap_dist);
-
-    apply_most_popular_color(png, &mut remapping, &matrix);
-
+    pairwise_swap_search(&mut remapping, matrix, max_swap_dist);
+    apply_most_popular_color(png, &mut remapping, matrix);
     apply_palette_reorder(png, &remapping)
 }
 
 /// Sort the colors in the palette using the battiato technique, returning the sorted image if successful
 // (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
-pub fn sorted_palette_battiato(png: &PngImage) -> Option<PngImage> {
-    // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
-        return None;
-    }
-    let palette = match &png.ihdr.color_type {
-        // Images with only two colors will remain unchanged from previous luma sort
-        ColorType::Indexed { palette } if palette.len() > 2 => palette,
-        _ => return None,
-    };
-
-    let matrix = CoOccurrenceMatrix::new(palette.len(), png);
-    let mut remapping = battiato_reindex(&matrix);
-
-    apply_most_popular_color(png, &mut remapping, &matrix);
-
+pub fn sorted_palette_battiato(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
+    let mut remapping = battiato_reindex(matrix);
+    apply_most_popular_color(png, &mut remapping, matrix);
     apply_palette_reorder(png, &remapping)
 }
 
@@ -547,16 +511,30 @@ fn pairwise_swap_search(remapping: &mut [usize], matrix: &CoOccurrenceMatrix, ma
 }
 
 /// The co-occurrence matrix records the number of times each color is adjacent to every other color.
-struct CoOccurrenceMatrix {
+#[derive(Debug)]
+pub struct CoOccurrenceMatrix {
     num_colors: usize,
     data: Vec<u32>,
     weighted_edges: Vec<(usize, usize)>,
 }
 impl CoOccurrenceMatrix {
-    fn new(num_colors: usize, png: &PngImage) -> Self {
+    pub fn from(png: &PngImage) -> Option<Self> {
+        // Interlacing not currently supported
+        if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
+            return None;
+        }
+        let num_colors = match &png.ihdr.color_type {
+            // Images with only two colors will remain unchanged from previous luma sort
+            ColorType::Indexed { palette } if palette.len() > 2 => palette.len(),
+            _ => return None,
+        };
         let data = Self::build(num_colors, png);
         let weighted_edges = Self::weighted_edges(num_colors, &data);
-        Self { num_colors, data, weighted_edges }
+        Some(Self {
+            num_colors,
+            data,
+            weighted_edges,
+        })
     }
 
     /// Construct the co-occurrence data
