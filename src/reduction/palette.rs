@@ -349,12 +349,12 @@ fn ezeng_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
             // Element at position p moves from "right of split" to "left of split"
             // cross_cost(p+1) - cross_cost(p) = Σ_{b>p} w(p,b) - Σ_{a<p} w(a,p)
             if p < m {
-                let rp = remapping[p];
+                let row_p = matrix.row(remapping[p]);
                 for &rb in &remapping[(p + 1)..m] {
-                    cross_cost += matrix.row(rp)[rb] as i64;
+                    cross_cost += row_p[rb] as i64;
                 }
                 for &ra in &remapping[..p] {
-                    cross_cost -= matrix.row(ra)[rp] as i64;
+                    cross_cost -= row_p[ra] as i64;
                 }
             }
         }
