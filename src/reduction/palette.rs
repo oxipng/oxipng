@@ -166,6 +166,7 @@ fn apply_palette_reorder(png: &PngImage, remapping: &[usize]) -> Option<PngImage
     let ColorType::Indexed { palette } = &png.ihdr.color_type else {
         return None;
     };
+    assert!(remapping.len() == palette.len());
 
     // Check if anything changed
     if remapping.iter().enumerate().all(|(a, b)| a == *b) {
@@ -239,7 +240,7 @@ fn apply_most_popular_color(png: &PngImage, remapping: &mut [usize], matrix: &Co
 fn mzeng_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
     // Initialize the mapping list with the two best indices.
     let edges = &matrix.weighted_edges;
-    let mut remapping = vec![edges[0].0, edges[0].1];
+    let mut remapping = vec![edges[0].0 as usize, edges[0].1 as usize];
 
     // Initialize the sums with the first two remappings and find the best one
     let mut sums = Vec::new();
@@ -299,7 +300,7 @@ fn mzeng_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
 fn ezeng_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
     // Initialize the mapping list with the two best indices.
     let edges = &matrix.weighted_edges;
-    let mut remapping = vec![edges[0].0, edges[0].1];
+    let mut remapping = vec![edges[0].0 as usize, edges[0].1 as usize];
 
     // Initialize the sums with the first two remappings and find the best one
     let mut sums = Vec::new();
@@ -392,7 +393,9 @@ fn battiato_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
     let mut vx = vec![(0, 0); matrix.num_colors];
 
     // Iterate the edges and assemble them into a chain
-    for &(i, j) in &matrix.weighted_edges {
+    for &(i, j, _) in &matrix.weighted_edges {
+        let i = i as usize;
+        let j = j as usize;
         let vi = vx[i];
         let vj = vx[j];
         if vi.0 == 0 && vj.0 == 0 {
@@ -457,8 +460,17 @@ fn battiato_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
         }
     }
 
-    // Return the completed chain
-    chains.swap_remove(0)
+    // Since zero-weight edges are skipped we may not have a complete chain yet.
+    // Join all remaining chains and add any unvisited vertices to complete the remapping.
+    chains
+        .into_iter()
+        .flatten()
+        .chain(
+            vx.into_iter()
+                .enumerate()
+                .filter_map(|(i, v)| if v.0 == 0 { Some(i) } else { None }),
+        )
+        .collect()
 }
 
 // Pairwise swap: for each pair (a, b), swap if it reduces cost.
@@ -515,7 +527,7 @@ fn pairwise_swap_search(remapping: &mut [usize], matrix: &CoOccurrenceMatrix, ma
 pub struct CoOccurrenceMatrix {
     num_colors: usize,
     data: Vec<u32>,
-    weighted_edges: Vec<(usize, usize)>,
+    weighted_edges: Vec<(u8, u8, u32)>,
 }
 impl CoOccurrenceMatrix {
     pub fn from(png: &PngImage) -> Option<Self> {
@@ -576,16 +588,19 @@ impl CoOccurrenceMatrix {
     }
 
     /// Calculate edge list sorted by weight
-    fn weighted_edges(num_colors: usize, data: &[u32]) -> Vec<(usize, usize)> {
+    fn weighted_edges(num_colors: usize, data: &[u32]) -> Vec<(u8, u8, u32)> {
         let mut edges = Vec::new();
         for i in 0..num_colors {
             let row = &data[(i * num_colors)..];
-            for (j, val) in row.iter().enumerate().take(i) {
-                edges.push(((j, i), val));
+            for (j, &val) in row.iter().enumerate().take(i) {
+                // For performance, skip zero-weight edges since they aren't really edges
+                if val > 0 {
+                    edges.push((j as u8, i as u8, val));
+                }
             }
         }
-        edges.sort_by(|(_, w1), (_, w2)| w2.cmp(w1));
-        edges.into_iter().map(|(e, _)| e).collect()
+        edges.sort_by(|(_, _, w1), (_, _, w2)| w2.cmp(w1));
+        edges
     }
 
     /// Get a row of the matrix
