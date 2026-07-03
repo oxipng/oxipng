@@ -535,8 +535,7 @@ impl CoOccurrenceMatrix {
     /// Pre-condition: The palette must match the image data, with no unused or missing entries.
     /// I.e., the image must have been processed with `reduced_palette` first.
     pub fn from(png: &PngImage) -> Option<Self> {
-        // Interlacing not currently supported
-        if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
+        if png.ihdr.bit_depth != BitDepth::Eight {
             return None;
         }
         let num_colors = match &png.ihdr.color_type {
@@ -565,9 +564,13 @@ impl CoOccurrenceMatrix {
                 if let Some(prev_val) = prev_val.replace(val) {
                     data[prev_val * num_colors + val] += 1;
                 }
-                if let Some(prev) = &prev {
-                    let prev_val = prev.data[i] as usize;
-                    data[prev_val * num_colors + val] += 1;
+                // Use safe access of the previous line bytes in case of interlacing where the line may be shorter.
+                // Note: Since filtering doesn't apply across interlacing passes it could be argued that we shouldn't
+                // use the previous line on a new pass. However, doing so could theoretically allow colors to be
+                // "isolated" and if no edges are formed then zeng doesn't have a starting point. It's easiest to just
+                // always use the previous line to ensure no possibility of isolation can occur.
+                if let Some(&prev_val) = prev.as_ref().and_then(|l| l.data.get(i)) {
+                    data[prev_val as usize * num_colors + val] += 1;
                 }
             }
             prev = Some(line);
