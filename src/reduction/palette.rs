@@ -530,6 +530,10 @@ pub struct CoOccurrenceMatrix {
     weighted_edges: Vec<(u8, u8, u32)>,
 }
 impl CoOccurrenceMatrix {
+    /// Construct a co-occurrence matrix from the given image, or return None if it is not supported.
+    ///
+    /// Pre-condition: The palette must match the image data, with no unused or missing entries.
+    /// I.e., the image must have been processed with `reduced_palette` first.
     pub fn from(png: &PngImage) -> Option<Self> {
         // Interlacing not currently supported
         if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
@@ -554,21 +558,15 @@ impl CoOccurrenceMatrix {
         // A flat array seems to perform better than a 2D array for ezeng and swaps
         let mut data = vec![0; num_colors * num_colors];
         let mut prev: Option<ScanLine> = None;
-        let mut prev_val = None;
         for line in png.scan_lines(false) {
+            let mut prev_val = None;
             for i in 0..line.data.len() {
                 let val = line.data[i] as usize;
-                if val >= num_colors {
-                    continue;
-                }
                 if let Some(prev_val) = prev_val.replace(val) {
                     data[prev_val * num_colors + val] += 1;
                 }
                 if let Some(prev) = &prev {
                     let prev_val = prev.data[i] as usize;
-                    if prev_val >= num_colors {
-                        continue;
-                    }
                     data[prev_val * num_colors + val] += 1;
                 }
             }
