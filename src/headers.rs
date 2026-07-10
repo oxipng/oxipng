@@ -69,6 +69,9 @@ pub struct Chunk {
     pub name: [u8; 4],
     pub data: Vec<u8>,
 }
+impl Chunk {
+    const REDUCTION_CONFLICTS: [[u8; 4]; 3] = [*b"bKGD", *b"sBIT", *b"hIST"];
+}
 
 /// [`Options`][crate::Options] to use when stripping chunks (metadata)
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -345,7 +348,20 @@ pub fn preprocess_chunks(aux_chunks: &mut Vec<Chunk>, opts: &mut Options) {
         opts.bit_depth_reduction = false;
         opts.color_type_reduction = false;
         opts.palette_reduction = false;
-        opts.grayscale_reduction = false;
+    } else if let StripChunks::Keep(names) = &opts.strip {
+        // Check for explicitly kept chunks that will prevent reductions
+        for name in Chunk::REDUCTION_CONFLICTS {
+            if names.contains(&name) && aux_chunks.iter().any(|c| c.name == name) {
+                warn!(
+                    "{} chunk explicitly kept, disabling all reductions",
+                    std::str::from_utf8(&name).unwrap()
+                );
+                opts.bit_depth_reduction = false;
+                opts.color_type_reduction = false;
+                opts.palette_reduction = false;
+                break;
+            }
+        }
     }
 }
 
@@ -356,14 +372,14 @@ pub fn postprocess_chunks(aux_chunks: &mut Vec<Chunk>, ihdr: &IhdrData, orig_ihd
     // generally more trouble than they're worth
     if orig_ihdr.bit_depth != ihdr.bit_depth || orig_ihdr.color_type != ihdr.color_type {
         aux_chunks.retain(|c| {
-            let invalid = &c.name == b"bKGD" || &c.name == b"sBIT" || &c.name == b"hIST";
-            if invalid {
+            if Chunk::REDUCTION_CONFLICTS.contains(&c.name) {
                 warn!(
                     "Removing {} chunk as it no longer matches the image data",
                     std::str::from_utf8(&c.name).unwrap()
                 );
+                return false;
             }
-            !invalid
+            true
         });
     }
 
