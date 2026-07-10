@@ -124,7 +124,7 @@ fn main() -> ExitCode {
                     num_not_optimized += 1;
                 }
             }
-            Err(PngError::C2PAMetadataPreventsChanges | PngError::InflatedDataTooLong(_)) => {}
+            Err(PngError::ChunkPreventsChanges(_) | PngError::InflatedDataTooLong(_)) => {}
             Err(_) => num_failed += 1,
         }
     }
@@ -543,7 +543,7 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
     let result = oxipng::optimize(input, output, opts);
     match &result {
         Ok(_) => {}
-        Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
+        Err(e @ PngError::ChunkPreventsChanges(_) | e @ PngError::InflatedDataTooLong(_)) => {
             warn!("{input}: Skipped: {e}");
         }
         Err(e) => {

@@ -85,14 +85,18 @@ impl PngData {
                     key_chunks.insert(chunk.name, chunk.data.to_owned());
                 }
                 _ if opts.strip.keep(&chunk.name) => {
-                    if chunk.is_c2pa() {
-                        // StripChunks::None is the default value, so to keep optimizing by default,
-                        // interpret it as stripping the C2PA metadata.
-                        // The C2PA metadata is invalidated if the file changes, so it shouldn't be kept.
-                        if opts.strip == StripChunks::None {
-                            continue;
+                    if chunk.name == *b"caBX" || chunk.name == *b"iDOT" {
+                        // caBX (C2PA manifest) and iDOT (data offsets) are necessarily invalidated
+                        // by changes to the file. If these chunks have been explicitly kept then
+                        // return an error, otherwise strip them automatically.
+                        if matches!(opts.strip, StripChunks::Keep(_)) {
+                            return Err(PngError::ChunkPreventsChanges(chunk.name));
                         }
-                        return Err(PngError::C2PAMetadataPreventsChanges);
+                        warn!(
+                            "Stripping {} chunk which will be invalidated by file changes",
+                            std::str::from_utf8(&chunk.name).unwrap()
+                        );
+                        continue;
                     }
                     if chunk.name == *b"fcTL" || chunk.name == *b"fdAT" {
                         // Validate the sequence number
