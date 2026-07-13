@@ -391,7 +391,7 @@ fn parse_opts_into_struct(
                 }
                 Some(match parse_chunk_name(x) {
                     Ok(name) if FORBIDDEN_CHUNKS.contains(&name) => Err(format!(
-                        "{x} chunk is controlled internally may not be explicitly kept"
+                        "{x} chunk is controlled internally and may not be explicitly kept"
                     )),
                     name => name,
                 })
