@@ -132,71 +132,32 @@ pub fn sorted_palette(png: &PngImage) -> Option<PngImage> {
 /// Sort the colors in the palette using the mzeng technique, returning the sorted image if successful
 // (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
-pub fn sorted_palette_mzeng(png: &PngImage) -> Option<PngImage> {
-    // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
-        return None;
-    }
-    let palette = match &png.ihdr.color_type {
-        // Images with only two colors will remain unchanged from previous luma sort
-        ColorType::Indexed { palette } if palette.len() > 2 => palette,
-        _ => return None,
-    };
-
-    let matrix = co_occurrence_matrix(palette.len(), png);
-    let edges = weighted_edges(&matrix);
-    let mut remapping = mzeng_reindex(palette.len(), edges, &matrix);
-
-    apply_most_popular_color(png, &mut remapping);
-
+pub fn sorted_palette_mzeng(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
+    let mut remapping = mzeng_reindex(matrix);
+    apply_most_popular_color(png, &mut remapping, matrix);
     apply_palette_reorder(png, &remapping)
 }
 
 /// Sort the colors in the palette using the ezeng technique, returning the sorted image if successful
 #[must_use]
-pub fn sorted_palette_ezeng(png: &PngImage, max_swap_dist: u8) -> Option<PngImage> {
-    // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
-        return None;
-    }
-    let palette = match &png.ihdr.color_type {
-        // Images with only two colors will remain unchanged from previous luma sort
-        ColorType::Indexed { palette } if palette.len() > 2 => palette,
-        _ => return None,
-    };
-
-    let matrix = co_occurrence_matrix(palette.len(), png);
-    let edges = weighted_edges(&matrix);
-    let mut remapping = ezeng_reindex(edges, &matrix);
-
+pub fn sorted_palette_ezeng(
+    png: &PngImage,
+    matrix: &CoOccurrenceMatrix,
+    max_swap_dist: u8,
+) -> Option<PngImage> {
+    let mut remapping = ezeng_reindex(matrix);
     // Perform additional optimization with pairwise swaps
-    pairwise_swap_search(&mut remapping, &matrix, max_swap_dist);
-
-    apply_most_popular_color(png, &mut remapping);
-
+    pairwise_swap_search(&mut remapping, matrix, max_swap_dist);
+    apply_most_popular_color(png, &mut remapping, matrix);
     apply_palette_reorder(png, &remapping)
 }
 
 /// Sort the colors in the palette using the battiato technique, returning the sorted image if successful
 // (Note: This is currently unused as it is outclassed by the ezeng method)
 #[must_use]
-pub fn sorted_palette_battiato(png: &PngImage) -> Option<PngImage> {
-    // Interlacing not currently supported
-    if png.ihdr.bit_depth != BitDepth::Eight || png.ihdr.interlaced {
-        return None;
-    }
-    let palette = match &png.ihdr.color_type {
-        // Images with only two colors will remain unchanged from previous luma sort
-        ColorType::Indexed { palette } if palette.len() > 2 => palette,
-        _ => return None,
-    };
-
-    let matrix = co_occurrence_matrix(palette.len(), png);
-    let edges = weighted_edges(&matrix);
-    let mut remapping = battiato_reindex(palette.len(), edges);
-
-    apply_most_popular_color(png, &mut remapping);
-
+pub fn sorted_palette_battiato(png: &PngImage, matrix: &CoOccurrenceMatrix) -> Option<PngImage> {
+    let mut remapping = battiato_reindex(matrix);
+    apply_most_popular_color(png, &mut remapping, matrix);
     apply_palette_reorder(png, &remapping)
 }
 
@@ -205,6 +166,7 @@ fn apply_palette_reorder(png: &PngImage, remapping: &[usize]) -> Option<PngImage
     let ColorType::Indexed { palette } = &png.ihdr.color_type else {
         return None;
     };
+    assert!(remapping.len() == palette.len());
 
     // Check if anything changed
     if remapping.iter().enumerate().all(|(a, b)| a == *b) {
@@ -254,24 +216,9 @@ fn most_popular_edge_color(num_colors: usize, png: &PngImage) -> Option<usize> {
     Some(max.0)
 }
 
-// Find the most popular color in the image, along with its count
-fn most_popular_color(num_colors: usize, png: &PngImage) -> (usize, u32) {
-    let mut counts = [0_u32; 256];
-    for &val in &png.data {
-        counts[val as usize] += 1;
-    }
-    counts
-        .iter()
-        .copied()
-        .take(num_colors)
-        .enumerate()
-        .max_by_key(|&(_, v)| v)
-        .unwrap_or_default()
-}
-
 // Put the most popular color first
-fn apply_most_popular_color(png: &PngImage, remapping: &mut [usize]) {
-    let most_popular = most_popular_color(remapping.len(), png);
+fn apply_most_popular_color(png: &PngImage, remapping: &mut [usize], matrix: &CoOccurrenceMatrix) {
+    let most_popular = matrix.most_popular_color();
     // If the most popular color is less than 15% of the image, don't use it
     if most_popular.1 < png.data.len() as u32 * 3 / 20 {
         return;
@@ -286,67 +233,21 @@ fn apply_most_popular_color(png: &PngImage, remapping: &mut [usize]) {
     }
 }
 
-// Calculate co-occurences matrix
-fn co_occurrence_matrix(num_colors: usize, png: &PngImage) -> Vec<Vec<u32>> {
-    let mut matrix = vec![vec![0_u32; num_colors]; num_colors];
-    let mut prev: Option<ScanLine> = None;
-    let mut prev_val = None;
-    for line in png.scan_lines(false) {
-        for i in 0..line.data.len() {
-            let val = line.data[i] as usize;
-            if val >= num_colors {
-                continue;
-            }
-            if let Some(prev_val) = prev_val.replace(val) {
-                matrix[prev_val][val] += 1;
-            }
-            if let Some(prev) = &prev {
-                let prev_val = prev.data[i] as usize;
-                if prev_val >= num_colors {
-                    continue;
-                }
-                matrix[prev_val][val] += 1;
-            }
-        }
-        prev = Some(line);
-    }
-
-    // Make the matrix symmetrical - this is faster to do afterward than maintaining symmetry during counting
-    #[allow(clippy::needless_range_loop)]
-    for i in 0..num_colors {
-        for j in 0..num_colors {
-            matrix[j][i] += matrix[i][j];
-            matrix[i][j] = matrix[j][i];
-        }
-    }
-    matrix
-}
-
-// Calculate edge list sorted by weight
-fn weighted_edges(matrix: &[Vec<u32>]) -> Vec<(usize, usize)> {
-    let mut edges = Vec::new();
-    for (i, m_row) in matrix.iter().enumerate() {
-        for (j, val) in m_row.iter().enumerate().take(i) {
-            edges.push(((j, i), val));
-        }
-    }
-    edges.sort_by(|(_, w1), (_, w2)| w2.cmp(w1));
-    edges.into_iter().map(|(e, _)| e).collect()
-}
-
 // Apply a greedy index assignment using the modified version of Zeng's techinque from
 // "A note on Zeng's technique for color reindexing of palette-based images" by Pinho et al
 // https://ieeexplore.ieee.org/document/1261987
 // Based on the C implementation in libwebp
-fn mzeng_reindex(num_colors: usize, edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> {
+fn mzeng_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
     // Initialize the mapping list with the two best indices.
-    let mut remapping = vec![edges[0].0, edges[0].1];
+    let edges = &matrix.weighted_edges;
+    let mut remapping = vec![edges[0].0 as usize, edges[0].1 as usize];
 
     // Initialize the sums with the first two remappings and find the best one
     let mut sums = Vec::new();
     let mut best_sum_pos = 0;
     let mut best_sum = (0, 0);
-    for (i, m_row) in matrix.iter().enumerate() {
+    for i in 0..matrix.num_colors {
+        let m_row = matrix.row(i);
         if i == remapping[0] || i == remapping[1] {
             continue;
         }
@@ -362,9 +263,10 @@ fn mzeng_reindex(num_colors: usize, edges: Vec<(usize, usize)>, matrix: &[Vec<u3
         let best_index = best_sum.0;
         // Compute delta to know if we need to prepend or append the best index.
         let mut delta: isize = 0;
-        let n = (num_colors - sums.len()) as isize;
+        let n = (matrix.num_colors - sums.len()) as isize;
+        let best_row = matrix.row(best_index);
         for (i, &index) in remapping.iter().enumerate() {
-            delta += (n - 1 - 2 * i as isize) * matrix[best_index][index] as isize;
+            delta += (n - 1 - 2 * i as isize) * best_row[index] as isize;
         }
         if delta > 0 {
             remapping.insert(0, best_index);
@@ -378,7 +280,7 @@ fn mzeng_reindex(num_colors: usize, edges: Vec<(usize, usize)>, matrix: &[Vec<u3
             best_sum_pos = 0;
             best_sum = (0, 0);
             for (i, sum) in sums.iter_mut().enumerate() {
-                sum.1 += matrix[best_index][sum.0];
+                sum.1 += best_row[sum.0];
                 if sum.1 > best_sum.1 {
                     best_sum_pos = i;
                     best_sum = *sum;
@@ -395,15 +297,17 @@ fn mzeng_reindex(num_colors: usize, edges: Vec<(usize, usize)>, matrix: &[Vec<u3
 // minimizing total cost increase, rather than just the ends. This version is significantly more
 // effective, but is more computationally expensive.
 // The "e" here could mean enhanced, extended, exhaustive, or perhaps elephant if you prefer.
-fn ezeng_reindex(edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> {
+fn ezeng_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
     // Initialize the mapping list with the two best indices.
-    let mut remapping = vec![edges[0].0, edges[0].1];
+    let edges = &matrix.weighted_edges;
+    let mut remapping = vec![edges[0].0 as usize, edges[0].1 as usize];
 
     // Initialize the sums with the first two remappings and find the best one
     let mut sums = Vec::new();
     let mut best_sum_pos = 0;
     let mut best_sum = (0, 0);
-    for (i, m_row) in matrix.iter().enumerate() {
+    for i in 0..matrix.num_colors {
+        let m_row = matrix.row(i);
         if i == remapping[0] || i == remapping[1] {
             continue;
         }
@@ -426,12 +330,13 @@ fn ezeng_reindex(edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> 
         let mut best_pos = 0;
         let mut best_cost = i64::MAX;
         let mut cross_cost: i64 = 0;
+        let best_row = matrix.row(best_index);
         for p in 0..=m {
             // New element's weighted distance to all existing elements
             let new_cost: i64 = (0..m)
                 .map(|k| {
                     let dist = if k < p { p - k } else { k + 1 - p };
-                    matrix[best_index][remapping[k]] as i64 * dist as i64
+                    best_row[remapping[k]] as i64 * dist as i64
                 })
                 .sum();
 
@@ -445,12 +350,12 @@ fn ezeng_reindex(edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> 
             // Element at position p moves from "right of split" to "left of split"
             // cross_cost(p+1) - cross_cost(p) = Σ_{b>p} w(p,b) - Σ_{a<p} w(a,p)
             if p < m {
-                let rp = remapping[p];
-                for b in (p + 1)..m {
-                    cross_cost += matrix[rp][remapping[b]] as i64;
+                let row_p = matrix.row(remapping[p]);
+                for &rb in &remapping[(p + 1)..m] {
+                    cross_cost += row_p[rb] as i64;
                 }
-                for a in 0..p {
-                    cross_cost -= matrix[remapping[a]][rp] as i64;
+                for &ra in &remapping[..p] {
+                    cross_cost -= row_p[ra] as i64;
                 }
             }
         }
@@ -463,7 +368,7 @@ fn ezeng_reindex(edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> 
             best_sum_pos = 0;
             best_sum = (0, 0);
             for (i, sum) in sums.iter_mut().enumerate() {
-                sum.1 += matrix[best_index][sum.0];
+                sum.1 += best_row[sum.0];
                 if sum.1 > best_sum.1 {
                     best_sum_pos = i;
                     best_sum = *sum;
@@ -479,16 +384,18 @@ fn ezeng_reindex(edges: Vec<(usize, usize)>, matrix: &[Vec<u32>]) -> Vec<usize> 
 // Calculate an approximate solution of the Traveling Salesman Problem using the algorithm
 // from "An efficient Re-indexing algorithm for color-mapped images" by Battiato et al
 // https://ieeexplore.ieee.org/document/1344033
-fn battiato_reindex(num_colors: usize, edges: Vec<(usize, usize)>) -> Vec<usize> {
+fn battiato_reindex(matrix: &CoOccurrenceMatrix) -> Vec<usize> {
     let mut chains = Vec::new();
     // Keep track of the state of each vertex (.0) and it's chain number (.1)
     // 0 = an unvisited vertex (White)
     // 1 = an endpoint of a chain (Red)
     // 2 = part of the middle of a chain (Black)
-    let mut vx = vec![(0, 0); num_colors];
+    let mut vx = vec![(0, 0); matrix.num_colors];
 
     // Iterate the edges and assemble them into a chain
-    for (i, j) in edges {
+    for &(i, j, _) in &matrix.weighted_edges {
+        let i = i as usize;
+        let j = j as usize;
         let vi = vx[i];
         let vj = vx[j];
         if vi.0 == 0 && vj.0 == 0 {
@@ -548,13 +455,22 @@ fn battiato_reindex(num_colors: usize, edges: Vec<(usize, usize)>) -> Vec<usize>
             }
         }
 
-        if chains[0].len() == num_colors {
+        if chains[0].len() == matrix.num_colors {
             break;
         }
     }
 
-    // Return the completed chain
-    chains.swap_remove(0)
+    // Since zero-weight edges are skipped we may not have a complete chain yet.
+    // Join all remaining chains and add any unvisited vertices to complete the remapping.
+    chains
+        .into_iter()
+        .flatten()
+        .chain(
+            vx.into_iter()
+                .enumerate()
+                .filter_map(|(i, v)| if v.0 == 0 { Some(i) } else { None }),
+        )
+        .collect()
 }
 
 // Pairwise swap: for each pair (a, b), swap if it reduces cost.
@@ -564,7 +480,7 @@ fn battiato_reindex(num_colors: usize, edges: Vec<(usize, usize)>) -> Vec<usize>
 //
 // `max_dist` limits the distance between pairs to consider to keep it performant. A value of 1 is
 // quite fast and still provides a good improvement, but higher values can be a little better.
-fn pairwise_swap_search(remapping: &mut [usize], matrix: &[Vec<u32>], max_dist: u8) {
+fn pairwise_swap_search(remapping: &mut [usize], matrix: &CoOccurrenceMatrix, max_dist: u8) {
     let num_colors = remapping.len();
     let b_limit = max_dist as usize + 1;
 
@@ -577,15 +493,25 @@ fn pairwise_swap_search(remapping: &mut [usize], matrix: &[Vec<u32>], max_dist: 
             for b in (a + 1)..(a + b_limit).min(num_colors) {
                 let va = remapping[a];
                 let vb = remapping[b];
+                let row_a = matrix.row(va);
+                let row_b = matrix.row(vb);
                 let mut delta: i64 = 0;
-                for (i, &vi) in remapping.iter().enumerate() {
-                    if i == a || i == b {
-                        continue;
-                    }
-                    let weight_diff = matrix[va][vi] as i64 - matrix[vb][vi] as i64;
-                    let dist_diff = (b as i64 - i as i64).unsigned_abs() as i64
-                        - (a as i64 - i as i64).unsigned_abs() as i64;
+                // Dist diff is calculated as: (b - i).abs() - (a - i).abs()
+                // Split by index ranges so we can simplify the calculation and avoid checks to skip a and b
+                let dist = (b - a) as i64;
+                for &vi in &remapping[..a] {
+                    let weight_diff = row_a[vi] as i64 - row_b[vi] as i64;
+                    delta += weight_diff * dist;
+                }
+                for (off, &vi) in remapping[(a + 1)..b].iter().enumerate() {
+                    let i = (a + 1 + off) as i64;
+                    let weight_diff = row_a[vi] as i64 - row_b[vi] as i64;
+                    let dist_diff = (a + b) as i64 - 2 * i;
                     delta += weight_diff * dist_diff;
+                }
+                for &vi in &remapping[(b + 1)..] {
+                    let weight_diff = row_a[vi] as i64 - row_b[vi] as i64;
+                    delta -= weight_diff * dist;
                 }
                 if delta < 0 {
                     remapping.swap(a, b);
@@ -593,5 +519,110 @@ fn pairwise_swap_search(remapping: &mut [usize], matrix: &[Vec<u32>], max_dist: 
                 }
             }
         }
+    }
+}
+
+/// The co-occurrence matrix records the number of times each color is adjacent to every other color.
+#[derive(Debug)]
+pub struct CoOccurrenceMatrix {
+    num_colors: usize,
+    data: Vec<u32>,
+    weighted_edges: Vec<(u8, u8, u32)>,
+}
+impl CoOccurrenceMatrix {
+    /// Construct a co-occurrence matrix from the given image, or return None if it is not supported.
+    ///
+    /// Pre-condition: The palette must match the image data, with no unused or missing entries.
+    /// I.e., the image must have been processed with `reduced_palette` first.
+    pub fn from(png: &PngImage) -> Option<Self> {
+        if png.ihdr.bit_depth != BitDepth::Eight {
+            return None;
+        }
+        let num_colors = match &png.ihdr.color_type {
+            // Images with only two colors will remain unchanged from previous luma sort
+            ColorType::Indexed { palette } if palette.len() > 2 => palette.len(),
+            _ => return None,
+        };
+        let data = Self::build(num_colors, png);
+        let weighted_edges = Self::weighted_edges(num_colors, &data);
+        Some(Self {
+            num_colors,
+            data,
+            weighted_edges,
+        })
+    }
+
+    /// Construct the co-occurrence data
+    fn build(num_colors: usize, png: &PngImage) -> Vec<u32> {
+        // A flat array seems to perform better than a 2D array for ezeng and swaps
+        let mut data = vec![0; num_colors * num_colors];
+        let mut prev: Option<ScanLine> = None;
+        for line in png.scan_lines(false) {
+            let mut prev_val = None;
+            for i in 0..line.data.len() {
+                let val = line.data[i] as usize;
+                if let Some(prev_val) = prev_val.replace(val) {
+                    data[prev_val * num_colors + val] += 1;
+                }
+                // Use safe access of the previous line bytes in case of interlacing where the line may be shorter.
+                // Note: Since filtering doesn't apply across interlacing passes it could be argued that we shouldn't
+                // use the previous line on a new pass. However, doing so could theoretically allow colors to be
+                // "isolated" and if no edges are formed then zeng doesn't have a starting point. It's easiest to just
+                // always use the previous line to ensure no possibility of isolation can occur.
+                if let Some(&prev_val) = prev.as_ref().and_then(|l| l.data.get(i)) {
+                    data[prev_val as usize * num_colors + val] += 1;
+                }
+            }
+            prev = Some(line);
+        }
+
+        // Make the matrix symmetrical - this is faster to do afterward than maintaining symmetry during counting
+        for i in 0..num_colors {
+            let row_start = i * num_colors;
+            for j in 0..=i {
+                let opposite = j * num_colors + i;
+                data[row_start + j] += data[opposite];
+                data[opposite] = data[row_start + j];
+            }
+        }
+        data
+    }
+
+    /// Calculate edge list sorted by weight
+    fn weighted_edges(num_colors: usize, data: &[u32]) -> Vec<(u8, u8, u32)> {
+        let mut edges = Vec::new();
+        for i in 0..num_colors {
+            let row = &data[(i * num_colors)..];
+            for (j, &val) in row.iter().enumerate().take(i) {
+                // For performance, skip zero-weight edges since they aren't really edges
+                if val > 0 {
+                    edges.push((j as u8, i as u8, val));
+                }
+            }
+        }
+        edges.sort_by(|(_, _, w1), (_, _, w2)| w2.cmp(w1));
+        edges
+    }
+
+    /// Get a row of the matrix
+    #[inline]
+    fn row(&self, row: usize) -> &[u32] {
+        let start = row * self.num_colors;
+        &self.data[start..(start + self.num_colors)]
+    }
+
+    /// Find the most popular color in the matrix, along with its count
+    fn most_popular_color(&self) -> (usize, u32) {
+        let mut best = (0, 0);
+        for i in 0..self.num_colors {
+            let sum: u32 = self.row(i).iter().sum();
+            if sum > best.1 {
+                best = (i, sum);
+            }
+        }
+        // Each color is counted 4 times in the matrix, so divide to get the actual count
+        // This is not 100% accurate for colors on the edge of the image, but it's close enough for our purposes
+        best.1 /= 4;
+        best
     }
 }

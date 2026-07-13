@@ -253,13 +253,24 @@ fn reductions_palette_sort(b: &mut Bencher) {
 }
 
 #[bench]
-fn reductions_palette_sort_mzeng(b: &mut Bencher) {
+fn reductions_palette_sort_build_matrix(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from(
         "tests/files/palette_8_should_be_palette_8.png",
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 
-    b.iter(|| palette::sorted_palette_mzeng(&png.raw));
+    b.iter(|| palette::CoOccurrenceMatrix::from(&png.raw));
+}
+
+#[bench]
+fn reductions_palette_sort_mzeng(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from(
+        "tests/files/palette_8_should_be_palette_8.png",
+    ));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+    let matrix = palette::CoOccurrenceMatrix::from(&png.raw).unwrap();
+
+    b.iter(|| palette::sorted_palette_mzeng(&png.raw, &matrix));
 }
 
 #[bench]
@@ -268,8 +279,9 @@ fn reductions_palette_sort_ezeng(b: &mut Bencher) {
         "tests/files/palette_8_should_be_palette_8.png",
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
+    let matrix = palette::CoOccurrenceMatrix::from(&png.raw).unwrap();
 
-    b.iter(|| palette::sorted_palette_ezeng(&png.raw, 0));
+    b.iter(|| palette::sorted_palette_ezeng(&png.raw, &matrix, 0));
 }
 
 #[bench]
@@ -278,8 +290,9 @@ fn reductions_palette_sort_ezeng_with_swaps(b: &mut Bencher) {
         "tests/files/palette_8_should_be_palette_8.png",
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
+    let matrix = palette::CoOccurrenceMatrix::from(&png.raw).unwrap();
 
-    b.iter(|| palette::sorted_palette_ezeng(&png.raw, 50));
+    b.iter(|| palette::sorted_palette_ezeng(&png.raw, &matrix, 50));
 }
 
 #[bench]
@@ -288,8 +301,9 @@ fn reductions_palette_sort_battiato(b: &mut Bencher) {
         "tests/files/palette_8_should_be_palette_8.png",
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
+    let matrix = palette::CoOccurrenceMatrix::from(&png.raw).unwrap();
 
-    b.iter(|| palette::sorted_palette_battiato(&png.raw));
+    b.iter(|| palette::sorted_palette_battiato(&png.raw, &matrix));
 }
 
 #[bench]
