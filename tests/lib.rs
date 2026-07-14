@@ -52,7 +52,7 @@ fn skip_c2pa() {
             ..Options::default()
         },
     );
-    assert!(matches!(result, Err(PngError::C2PAMetadataPreventsChanges)));
+    assert!(matches!(result, Err(PngError::ChunkPreventsChanges(_))));
 }
 
 #[test]

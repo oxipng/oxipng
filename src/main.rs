@@ -124,7 +124,7 @@ fn main() -> ExitCode {
                     num_not_optimized += 1;
                 }
             }
-            Err(PngError::C2PAMetadataPreventsChanges | PngError::InflatedDataTooLong(_)) => {}
+            Err(PngError::ChunkPreventsChanges(_) | PngError::InflatedDataTooLong(_)) => {}
             Err(_) => num_failed += 1,
         }
     }
@@ -379,16 +379,22 @@ fn parse_opts_into_struct(
         };
     }
 
+    const FORBIDDEN_CHUNKS: [[u8; 4]; 5] = [*b"IHDR", *b"IDAT", *b"tRNS", *b"PLTE", *b"IEND"];
     if let Some(keep) = matches.get_one::<String>("keep") {
         let mut keep_display = false;
         let mut names = keep
             .split(',')
-            .filter_map(|name| {
-                if name == "display" {
+            .filter_map(|x| {
+                if x == "display" {
                     keep_display = true;
                     return None;
                 }
-                Some(parse_chunk_name(name))
+                Some(match parse_chunk_name(x) {
+                    Ok(name) if FORBIDDEN_CHUNKS.contains(&name) => Err(format!(
+                        "{x} chunk is controlled internally and may not be explicitly kept"
+                    )),
+                    name => name,
+                })
             })
             .collect::<Result<IndexSet<_>, _>>()?;
         if keep_display {
@@ -403,8 +409,6 @@ fn parse_opts_into_struct(
         } else if strip == "all" {
             opts.strip = StripChunks::All;
         } else {
-            const FORBIDDEN_CHUNKS: [[u8; 4]; 5] =
-                [*b"IHDR", *b"IDAT", *b"tRNS", *b"PLTE", *b"IEND"];
             let names = strip
                 .split(',')
                 .map(|x| {
@@ -539,7 +543,7 @@ fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> Optimizatio
     let result = oxipng::optimize(input, output, opts);
     match &result {
         Ok(_) => {}
-        Err(e @ PngError::C2PAMetadataPreventsChanges | e @ PngError::InflatedDataTooLong(_)) => {
+        Err(e @ PngError::ChunkPreventsChanges(_) | e @ PngError::InflatedDataTooLong(_)) => {
             warn!("{input}: Skipped: {e}");
         }
         Err(e) => {

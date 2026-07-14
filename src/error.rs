@@ -8,6 +8,7 @@ pub enum PngError {
     APNGOutOfOrder,
     C2PAMetadataPreventsChanges,
     ChunkMissing(&'static str),
+    ChunkPreventsChanges([u8; 4]),
     CRCMismatch([u8; 4]),
     DeflatedDataTooLong(usize),
     IncorrectDataLength(usize, usize),
@@ -33,6 +34,11 @@ impl fmt::Display for PngError {
                 "The image contains C2PA manifest that would be invalidated by any file changes",
             ),
             Self::ChunkMissing(s) => write!(f, "Chunk {s} missing or empty"),
+            Self::ChunkPreventsChanges(ref c) => write!(
+                f,
+                "The image contains a {} chunk that would be invalidated by any file changes",
+                String::from_utf8_lossy(c)
+            ),
             Self::CRCMismatch(ref c) => write!(
                 f,
                 "CRC mismatch in {} chunk; May be recoverable by using --fix",
