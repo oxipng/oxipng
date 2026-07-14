@@ -93,7 +93,8 @@ pub(crate) fn perform_reductions(
             png = Arc::new(reduced);
         }
         // If either action changed the data then enter this into the evaluator
-        if !Arc::ptr_eq(&png, &baseline) {
+        // (Skip for effort 2 - we'll rely on the ezeng sort later)
+        if effort != 2 && !Arc::ptr_eq(&png, &baseline) {
             eval.try_image_with_description(png.clone(), "Indexed (luma sort)");
             evaluation_added = true;
         }
@@ -151,7 +152,7 @@ pub(crate) fn perform_reductions(
     };
 
     // Attempt additional palette sorting techniques
-    if effort >= 3 && opts.palette_reduction && !deadline.passed() {
+    if effort >= 2 && opts.palette_reduction && !deadline.passed() {
         // Collect a list of palettes so we can avoid evaluating the same one twice
         let mut palettes = vec![baseline.ihdr.color_type.clone()];
         // Make sure we use the `indexed` var as input if it exists
@@ -160,9 +161,10 @@ pub(crate) fn perform_reductions(
         if let Some(matrix) = CoOccurrenceMatrix::from(input) {
             // Attempt to sort the palette using the ezeng method
             // 50 is a good value for max_swap_dist to keep performance reasonable and can actually
-            // be better than the full 255 in some cases
+            // be better than the full 255 in some cases. 1 is faster for low-effort.
+            let max_swap_dist = if effort >= 3 { 50 } else { 1 };
             if !deadline.passed()
-                && let Some(reduced) = sorted_palette_ezeng(input, &matrix, 50)
+                && let Some(reduced) = sorted_palette_ezeng(input, &matrix, max_swap_dist)
                 && !palettes.contains(&reduced.ihdr.color_type)
             {
                 palettes.push(reduced.ihdr.color_type.clone());
