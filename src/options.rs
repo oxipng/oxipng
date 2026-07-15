@@ -83,6 +83,50 @@ impl<T: Into<PathBuf>> From<T> for InFile {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+/// Minimum savings threshold required to accept optimized output.
+pub enum MinGain {
+    /// Require at least this many bytes to be saved.
+    Bytes(usize),
+    /// Require at least this ratio of the original size to be saved.
+    ///
+    /// The value is represented as a fraction in the range `0.0..=1.0`,
+    /// where `0.01` means 1%.
+    Ratio(f64),
+}
+
+impl MinGain {
+    #[must_use]
+    pub const fn bytes(bytes: usize) -> Self {
+        Self::Bytes(bytes)
+    }
+
+    #[must_use]
+    pub fn ratio(ratio: f64) -> Option<Self> {
+        if ratio.is_finite() && (0.0..=1.0).contains(&ratio) {
+            Some(Self::Ratio(ratio))
+        } else {
+            None
+        }
+    }
+
+    /// Check whether a given optimized size satisfies this threshold.
+    #[must_use]
+    pub fn is_satisfied(self, original_size: usize, optimized_size: usize) -> bool {
+        let Some(saved_bytes) = original_size.checked_sub(optimized_size) else {
+            return false;
+        };
+        saved_bytes >= self.required_savings(original_size)
+    }
+
+    fn required_savings(self, original_size: usize) -> usize {
+        match self {
+            Self::Bytes(bytes) => bytes,
+            Self::Ratio(ratio) => (original_size as f64 * ratio).ceil() as usize,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 /// Options controlling the output of the `optimize` function
 pub struct Options {
