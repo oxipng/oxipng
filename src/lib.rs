@@ -389,20 +389,19 @@ fn optimize_raw(
     max_size: Option<usize>,
 ) -> Option<Candidate> {
     // Libdeflate has four algorithms: 0 = 'uncompressed', 1-4 = 'greedy', 5-7 = 'lazy', 8-9 = 'lazy2', 10-12 = 'near-optimal'
-    // 5 is the minimumm required for a decent evaluation result
-    // 7 is not noticeably slower than 5 and improves evaluation of filters in 'fast' mode (o2 and lower)
+    // 5 is the minimumm required for a decent evaluation result (o0 and o1)
+    // 7 is only slightly slower than 5 and improves evaluation of filters in 'fast' mode (o2)
     // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
     // 9 is not appreciably better than 8
     // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
     let compression = match opts.deflater {
-        Deflater::Libdeflater { compression } => {
-            if opts.fast_evaluation { 7 } else { 8 }.min(compression)
-        }
+        Deflater::Libdeflater { compression } if compression < 11 => 5.min(compression),
+        _ if opts.fast_evaluation => 7,
         _ => 8,
     };
     let eval_deflater = Deflater::Libdeflater { compression };
-    // If only one filter is selected, use this for evaluations
-    let eval_filters = if opts.filters.len() == 1 {
+    let eval_filters = if opts.filters.len() <= 2 {
+        // If only one or two filters are given, use them for evaluations
         opts.filters.clone()
     } else {
         // None and Bigrams work well together, especially for alpha reductions
@@ -517,18 +516,6 @@ fn perform_trials(
     }
 
     // Perform full compression trials of selected filters and determine the best
-
-    if filters.is_empty() {
-        // Pick a filter automatically
-        if image.ihdr.bit_depth as u8 >= 8 {
-            // Bigrams is the best all-rounder when there's at least one byte per pixel
-            filters.insert(FilterStrategy::Bigrams);
-        } else {
-            // Otherwise delta filters generally don't work well, so just stick with None
-            filters.insert(FilterStrategy::NONE);
-        }
-    }
-
     debug!("Trying {} filters with {}", filters.len(), opts.deflater);
     let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
     if let Some(max_size) = max_size {

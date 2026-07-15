@@ -41,8 +41,8 @@ Set the optimization level preset. The default level 2 is quite fast and provide
 compression. Lower levels are faster, higher levels provide better compression, though \
 with increasingly diminishing returns.
 
-    0   => --zc 5  --fast              (filter chosen heuristically)
-    1   => --zc 10 --fast              (filter chosen heuristically)
+    0   => --zc 5  -f 0,5     --fast
+    1   => --zc 10 -f 0,7     --fast
     2   => --zc 11 -f 0,1,6,7 --fast
     3   => --zc 11 -f 0,7,8,9         --brute-level 1 --brute-lines 3
     4   => --zc 12 -f 0,7,8,9         --brute-level 1 --brute-lines 4
