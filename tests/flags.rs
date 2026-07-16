@@ -600,8 +600,10 @@ fn no_bit_depth_change() {
     let input = PathBuf::from("tests/files/palette_4_should_be_palette_2.png");
     let (output, mut opts) = get_opts(&input);
     opts.bit_depth_reduction = false;
+    // Also test that interlacing changes without changing the depth
+    opts.interlace = Some(true);
 
-    test_it_converts(
+    test_it_converts_callbacks(
         input,
         &output,
         &opts,
@@ -609,6 +611,12 @@ fn no_bit_depth_change() {
         BitDepth::Four,
         INDEXED,
         BitDepth::Four,
+        |png| {
+            assert!(!png.raw.ihdr.interlaced);
+        },
+        |png| {
+            assert!(png.raw.ihdr.interlaced);
+        },
     );
 }
 

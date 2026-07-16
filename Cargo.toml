@@ -38,7 +38,6 @@ name = "zopfli"
 required-features = ["zopfli"]
 
 [dependencies]
-bitvec = "1.0.1"
 clap = { version = "4.6.0", optional = true, features = ["wrap_help"] }
 env_logger = { version = "0.11.10", optional = true, default-features = false, features = ["auto-color"] }
 image = { version = "0.25.9", optional = true, default-features = false, features = ["png"] }

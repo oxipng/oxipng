@@ -10,6 +10,8 @@ pub mod color;
 use crate::color::*;
 pub mod palette;
 use crate::palette::*;
+pub mod interlace;
+use crate::interlace::*;
 
 pub(crate) fn perform_reductions(
     mut png: Arc<PngImage>,
@@ -26,17 +28,9 @@ pub(crate) fn perform_reductions(
         _ => false,
     };
 
-    // Interlacing must be processed first in order to evaluate the rest correctly
-    if let Some(interlacing) = opts.interlace
-        && let Some(reduced) = png.change_interlacing(interlacing)
-    {
-        png = Arc::new(reduced);
-    }
-
     // If alpha optimization is enabled, clean the alpha channel before continuing
     // This can allow some color type reductions which may not have been possible otherwise
     if opts.optimize_alpha
-        && !deadline.passed()
         && let Some(reduced) = cleaned_alpha_channel(&png)
     {
         png = Arc::new(reduced);
@@ -45,7 +39,6 @@ pub(crate) fn perform_reductions(
     // Attempt to reduce 16-bit to 8-bit
     // This is just removal of bytes and does not need to be evaluated
     if opts.bit_depth_reduction
-        && !deadline.passed()
         && let Some(reduced) = reduced_bit_depth_16_to_8(&png, opts.scale_16)
     {
         png = Arc::new(reduced);
@@ -55,7 +48,6 @@ pub(crate) fn perform_reductions(
     // This is just removal of bytes and does not need to be evaluated
     if opts.color_type_reduction
         && opts.grayscale_reduction
-        && !deadline.passed()
         && let Some(reduced) = reduced_rgb_to_grayscale(&png)
     {
         png = Arc::new(reduced);
@@ -63,9 +55,16 @@ pub(crate) fn perform_reductions(
 
     // Attempt to expand the bit depth to 8
     // This does need to be evaluated but will be done so later when it gets reduced again
+    // This should be done before interlacing for best performance
     if opts.bit_depth_reduction
-        && !deadline.passed()
         && let Some(reduced) = expanded_bit_depth_to_8(&png)
+    {
+        png = Arc::new(reduced);
+    }
+
+    // Interlacing must be processed before any evaluations
+    if let Some(interlacing) = opts.interlace
+        && let Some(reduced) = changed_interlacing(&png, interlacing)
     {
         png = Arc::new(reduced);
     }
