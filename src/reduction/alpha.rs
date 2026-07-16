@@ -31,14 +31,33 @@ pub fn cleaned_alpha_channel(png: &PngImage) -> Option<PngImage> {
     })
 }
 
+/// Attempt to remove the alpha channel, adding a transparency pixel if necessary
 #[must_use]
 pub fn reduced_alpha_channel(png: &PngImage, optimize_alpha: bool) -> Option<PngImage> {
-    if !png.ihdr.color_type.has_alpha() {
-        return None;
+    match (&png.ihdr.color_type, png.ihdr.bit_depth) {
+        (ColorType::GrayscaleAlpha, BitDepth::Eight) => {
+            reduced_alpha_channel_const::<2, 1>(png, optimize_alpha)
+        }
+        (ColorType::GrayscaleAlpha, BitDepth::Sixteen) => {
+            reduced_alpha_channel_const::<4, 2>(png, optimize_alpha)
+        }
+        (ColorType::RGBA, BitDepth::Eight) => {
+            reduced_alpha_channel_const::<4, 3>(png, optimize_alpha)
+        }
+        (ColorType::RGBA, BitDepth::Sixteen) => {
+            reduced_alpha_channel_const::<8, 6>(png, optimize_alpha)
+        }
+        _ => None,
     }
-    let byte_depth = png.bytes_per_channel();
-    let bpp = png.channels_per_pixel() * byte_depth;
-    let colored_bytes = bpp - byte_depth;
+}
+
+// Delegate function with const generics for performance
+#[must_use]
+fn reduced_alpha_channel_const<const BPP: usize, const CB: usize>(
+    png: &PngImage,
+    optimize_alpha: bool,
+) -> Option<PngImage> {
+    let colored_bytes = CB;
 
     // If alpha optimisation is enabled, see if the image contains only fully opaque and fully transparent pixels.
     // In case this occurs, we want to try and find an unused color we can use for the tRNS chunk.
@@ -46,7 +65,7 @@ pub fn reduced_alpha_channel(png: &PngImage, optimize_alpha: bool) -> Option<Png
     let mut has_transparency = false;
     let mut used_colors = vec![false; 256];
 
-    for pixel in png.data.chunks_exact(bpp) {
+    for pixel in png.data.as_chunks::<BPP>().0 {
         if optimize_alpha && pixel.iter().skip(colored_bytes).all(|b| *b == 0) {
             // Fully transparent, we may be able to reduce with tRNS
             has_transparency = true;
@@ -75,7 +94,7 @@ pub fn reduced_alpha_channel(png: &PngImage, optimize_alpha: bool) -> Option<Png
     };
 
     let mut raw_data = Vec::with_capacity(png.data.len());
-    for pixel in png.data.chunks_exact(bpp) {
+    for pixel in png.data.as_chunks::<BPP>().0 {
         match transparency_pixel {
             Some(trns) if pixel.iter().skip(colored_bytes).all(|b| *b == 0) => {
                 raw_data.resize(raw_data.len() + colored_bytes, trns);
