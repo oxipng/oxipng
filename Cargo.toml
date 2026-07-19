@@ -21,7 +21,7 @@ license = "MIT"
 name = "oxipng"
 repository = "https://github.com/oxipng/oxipng"
 version = "10.1.1"
-rust-version = "1.85.1"
+rust-version = "1.88.0"
 
 [badges]
 travis-ci = { repository = "oxipng/oxipng", branch = "master" }

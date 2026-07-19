@@ -161,10 +161,10 @@ impl Evaluator {
 
                     // Skip if it exceeds best known size. (This is important to ensure
                     // the evaluator returns no result when all candidates are too large.)
-                    if let Some(max) = best_candidate_size.get() {
-                        if estimated_output_size > max {
-                            return;
-                        }
+                    if let Some(max) = best_candidate_size.get()
+                        && estimated_output_size > max
+                    {
+                        return;
                     }
 
                     // We only need to retain the IDAT data in the final round
