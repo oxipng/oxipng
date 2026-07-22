@@ -1,5 +1,4 @@
 use libdeflater::{CompressionLvl, Compressor};
-use rustc_hash::FxHashMap;
 use std::{fmt, fmt::Display};
 
 use crate::RowFilter;
@@ -122,14 +121,14 @@ impl StrategyEvaluator for EntropyEvaluator {
         let mut hist1 = [0_u32; 0x100];
         let mut hist2 = [0_u32; 0x100];
         let mut hist3 = [0_u32; 0x100];
-        let mut chunks = output[offset..].chunks_exact(4);
-        for chunk in &mut chunks {
+        let (chunks, remainder) = output[offset..].as_chunks::<4>();
+        for chunk in chunks {
             hist0[chunk[0] as usize] += 1;
             hist1[chunk[1] as usize] += 1;
             hist2[chunk[2] as usize] += 1;
             hist3[chunk[3] as usize] += 1;
         }
-        for &i in chunks.remainder() {
+        for &i in remainder {
             hist0[i as usize] += 1;
         }
 
@@ -193,13 +192,15 @@ impl StrategyEvaluator for BigramsEvaluator {
 
 // Bigram entropy, combined from Entropy and Bigrams filters
 struct BigEntEvaluator {
-    counts: FxHashMap<u16, u32>,
+    seen: [u32; 0x10000],
+    touched: Vec<u16>,
     best_size: i32,
 }
 impl BigEntEvaluator {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
-            counts: FxHashMap::default(),
+            seen: [0; 0x10000],
+            touched: Vec::new(),
             best_size: i32::MIN,
         }
     }
@@ -209,15 +210,19 @@ impl StrategyEvaluator for BigEntEvaluator {
         self.best_size = i32::MIN;
     }
     fn evaluate(&mut self, output: &[u8], offset: usize) -> bool {
-        self.counts.clear();
         for pair in output[offset..].windows(2) {
-            let bigram = (u16::from(pair[0]) << 8) | u16::from(pair[1]);
-            self.counts
-                .entry(bigram)
-                .and_modify(|e| *e += 1)
-                .or_insert(1);
+            let bigram = ((pair[0] as usize) << 8) | pair[1] as usize;
+            if self.seen[bigram] == 0 {
+                self.touched.push(bigram as u16);
+            }
+            self.seen[bigram] += 1;
         }
-        let size = self.counts.values().fold(0, |acc, &x| acc + ilog2i(x)) as i32;
+        let mut size = 0;
+        for &idx in &self.touched {
+            size += ilog2i(self.seen[idx as usize]) as i32;
+            self.seen[idx as usize] = 0;
+        }
+        self.touched.clear();
         if size > self.best_size {
             self.best_size = size;
             return true;
