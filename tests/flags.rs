@@ -14,7 +14,6 @@ const INDEXED: u8 = 3;
 fn get_opts(input: &Path) -> (OutFile, Options) {
     let options = Options {
         force: true,
-        fast_evaluation: false,
         filters: indexset! {FilterStrategy::NONE},
         ..Default::default()
     };
@@ -365,8 +364,8 @@ fn interlacing_0_to_1_small_files() {
         &opts,
         INDEXED,
         BitDepth::Eight,
-        RGB,
-        BitDepth::Eight,
+        INDEXED,
+        BitDepth::One,
         |png| {
             assert!(!png.raw.ihdr.interlaced);
         },
@@ -388,8 +387,8 @@ fn interlacing_1_to_0_small_files() {
         &opts,
         INDEXED,
         BitDepth::Eight,
-        RGB,
-        BitDepth::Eight,
+        INDEXED,
+        BitDepth::One,
         |png| {
             assert!(png.raw.ihdr.interlaced);
         },
