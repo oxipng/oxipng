@@ -41,17 +41,17 @@ Set the optimization level preset. The default level 2 is quite fast and provide
 compression. Lower levels are faster, higher levels provide better compression, though \
 with increasingly diminishing returns.
 
-    0   => --zc 5  --fast              (filter chosen heuristically)
-    1   => --zc 10 --fast              (filter chosen heuristically)
-    2   => --zc 11 -f 0,1,6,7 --fast
-    3   => --zc 11 -f 0,7,8,9         --brute-level 1 --brute-lines 3
-    4   => --zc 12 -f 0,7,8,9         --brute-level 1 --brute-lines 4
-    5   => --zc 12 -f 0,1,2,5,6,7,8,9 --brute-level 4 --brute-lines 4
-    6   => --zc 12 -f 0-9             --brute-level 5 --brute-lines 8
+    0   => --zc 5  -f 0,5         --fast
+    1   => --zc 10 -f 0,7         --fast
+    2   => --zc 11 -f 0,1,6,7     --fast
+    3   => --zc 11 -f 0,1,6,7,8,9 --fast --brute-level 1 --brute-lines 3
+    4   => --zc 12 -f 0,1,6,7,8,9 --fast --brute-level 1 --brute-lines 4
+    5   => --zc 12 -f 0,1,6,7,8,9        --brute-level 1 --brute-lines 8
+    6   => --zc 12 -f 0-9                --brute-level 5 --brute-lines 8
     max => (stable alias for the maximum level)
 
-Manually specifying a compression option (zc, f, etc.) will override the optimization \
-preset, regardless of the order you write the arguments.")
+Manually specifying a compression option (zc, f, etc.) will override the value in the \
+optimization preset, regardless of the order you write the arguments.")
                 .short('o')
                 .long("opt")
                 .value_name("level")
@@ -265,8 +265,8 @@ The default value depends on the optimization level preset.")
                 .help("Use fast filter evaluation")
                 .long_help("\
 Perform a fast compression evaluation of each enabled filter, followed by a single main \
-compression trial of the best result. Recommended if you have more filters enabled than \
-CPU cores.")
+compression trial of the best result. Note that this is enabled by default and will only \
+be disabled at level 5 or above.")
                 .long("fast")
                 .action(ArgAction::SetTrue),
         )
