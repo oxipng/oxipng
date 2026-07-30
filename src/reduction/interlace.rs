@@ -84,8 +84,7 @@ fn deinterlace_bytes(png: &PngImage) -> Vec<u8> {
 
 // Delegate function with const generics for performance
 fn deinterlace_bytes_const<const BPP: usize>(png: &PngImage) -> Vec<u8> {
-    let bytes_per_pixel = BPP;
-    let bytes_per_line = bytes_per_pixel * png.ihdr.width as usize;
+    let bytes_per_line = BPP * png.ihdr.width as usize;
     // Initialize the output data
     let mut data: Vec<u8> = vec![0; bytes_per_line * png.ihdr.height as usize];
     let mut current_pass = 1;
@@ -95,7 +94,7 @@ fn deinterlace_bytes_const<const BPP: usize>(png: &PngImage) -> Vec<u8> {
         for (i, pixel) in line.data.as_chunks::<BPP>().0.iter().enumerate() {
             let current_x = pass_constants.x_shift as usize + i * pass_constants.x_step as usize;
             // Copy this byte into the output line
-            let index = current_y * bytes_per_line + current_x * bytes_per_pixel;
+            let index = current_y * bytes_per_line + current_x * BPP;
             data[index..(index + BPP)].copy_from_slice(pixel);
         }
         // Calculate the next line and move to next pass if necessary
