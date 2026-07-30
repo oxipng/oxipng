@@ -488,11 +488,11 @@ fn parse_numeric_range_opts(
     let mut items = IndexSet::new();
 
     // one value
-    if let Ok(one_value) = input.parse::<u8>() {
-        if (min_value <= one_value) && (one_value <= max_value) {
-            items.insert(one_value);
-            return Ok(items);
-        }
+    if let Ok(one_value) = input.parse::<u8>()
+        && (min_value <= one_value && one_value <= max_value)
+    {
+        items.insert(one_value);
+        return Ok(items);
     }
 
     // a range ("A-B")
@@ -500,13 +500,13 @@ fn parse_numeric_range_opts(
     if range_values.len() == 2 {
         let first_opt = range_values[0].parse::<u8>();
         let second_opt = range_values[1].parse::<u8>();
-        if let (Ok(first), Ok(second)) = (first_opt, second_opt) {
-            if min_value <= first && first < second && second <= max_value {
-                for i in first..=second {
-                    items.insert(i);
-                }
-                return Ok(items);
+        if let (Ok(first), Ok(second)) = (first_opt, second_opt)
+            && (min_value <= first && first < second && second <= max_value)
+        {
+            for i in first..=second {
+                items.insert(i);
             }
+            return Ok(items);
         }
         return Err(ERROR_MESSAGE.to_owned());
     }
@@ -515,14 +515,12 @@ fn parse_numeric_range_opts(
     let list_items = input.split(',').collect::<Vec<&str>>();
     if list_items.len() > 1 {
         for value in list_items {
-            if let Ok(value_int) = value.parse::<u8>() {
-                if (min_value <= value_int)
-                    && (value_int <= max_value)
-                    && !items.contains(&value_int)
-                {
-                    items.insert(value_int);
-                    continue;
-                }
+            if let Ok(value_int) = value.parse::<u8>()
+                && (min_value <= value_int && value_int <= max_value)
+                && !items.contains(&value_int)
+            {
+                items.insert(value_int);
+                continue;
             }
             return Err(ERROR_MESSAGE.to_owned());
         }
@@ -533,11 +531,11 @@ fn parse_numeric_range_opts(
 }
 
 fn process_file(input: &InFile, output: &OutFile, opts: &Options) -> OptimizationResult {
-    if let (Some(max_size), InFile::Path(path)) = (opts.max_decompressed_size, input) {
-        if path.metadata().is_ok_and(|m| m.len() > max_size as u64) {
-            warn!("{input}: Skipped: File exceeds the maximum size ({max_size} bytes)");
-            return Err(PngError::InflatedDataTooLong(max_size));
-        }
+    if let (Some(max_size), InFile::Path(path)) = (opts.max_decompressed_size, input)
+        && path.metadata().is_ok_and(|m| m.len() > max_size as u64)
+    {
+        warn!("{input}: Skipped: File exceeds the maximum size ({max_size} bytes)");
+        return Err(PngError::InflatedDataTooLong(max_size));
     }
 
     let result = oxipng::optimize(input, output, opts);

@@ -198,7 +198,9 @@ fn palette_to_rgba(
 ) -> Result<Vec<RGBA8>, PngError> {
     let palette_data = palette_data.ok_or(PngError::ChunkMissing("PLTE"))?;
     let mut palette: Vec<_> = palette_data
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|color| RGBA8::new(color[0], color[1], color[2], 255))
         .collect();
 

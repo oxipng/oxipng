@@ -55,6 +55,36 @@ fn reductions_8_to_1_bits(b: &mut Bencher) {
 }
 
 #[bench]
+fn reductions_1_to_8_bits(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from(
+        "tests/files/palette_1_should_be_palette_1.png",
+    ));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+
+    b.iter(|| bit_depth::expanded_bit_depth_to_8(&png.raw));
+}
+
+#[bench]
+fn reductions_2_to_8_bits(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from(
+        "tests/files/palette_2_should_be_palette_2.png",
+    ));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+
+    b.iter(|| bit_depth::expanded_bit_depth_to_8(&png.raw));
+}
+
+#[bench]
+fn reductions_4_to_8_bits(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from(
+        "tests/files/palette_4_should_be_palette_4.png",
+    ));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+
+    b.iter(|| bit_depth::expanded_bit_depth_to_8(&png.raw));
+}
+
+#[bench]
 fn reductions_grayscale_8_to_4_bits(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from(
         "tests/files/grayscale_8_should_be_grayscale_4.png",
@@ -196,6 +226,16 @@ fn reductions_grayscale_alpha_to_grayscale_trns_8(b: &mut Bencher) {
 fn reductions_grayscale_8_to_palette_8(b: &mut Bencher) {
     let input = test::black_box(PathBuf::from(
         "tests/files/grayscale_8_should_be_palette_8.png",
+    ));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+
+    b.iter(|| color::reduced_to_indexed(&png.raw, true));
+}
+
+#[bench]
+fn reductions_grayscale_alpha_to_palette_8(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from(
+        "tests/files/grayscale_alpha_8_should_be_palette_8.png",
     ));
     let png = PngData::new(&input, &Options::default()).unwrap();
 

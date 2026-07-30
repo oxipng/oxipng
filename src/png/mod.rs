@@ -10,7 +10,6 @@ use crate::{
     error::PngError,
     filters::*,
     headers::*,
-    interlace::{deinterlace_image, interlace_image},
 };
 
 pub(crate) mod scan_lines;
@@ -141,10 +140,10 @@ impl PngData {
             key_chunks.remove(b"PLTE"),
             key_chunks.remove(b"tRNS"),
         )?;
-        if let Some(max) = opts.max_decompressed_size {
-            if ihdr.raw_data_size() > max {
-                return Err(PngError::InflatedDataTooLong(max));
-            }
+        if let Some(max) = opts.max_decompressed_size
+            && ihdr.raw_data_size() > max
+        {
+            return Err(PngError::InflatedDataTooLong(max));
         }
 
         let raw = PngImage::new(ihdr, &idat_data)?;
@@ -262,25 +261,6 @@ impl PngImage {
         };
         image.data = image.unfilter_image()?;
         Ok(image)
-    }
-
-    /// Enable or disable interlacing
-    /// Returns the new image if the interlacing was changed, None otherwise
-    /// Assumes that the data has already been de-filtered
-    #[inline]
-    #[must_use]
-    pub fn change_interlacing(&self, interlace: bool) -> Option<Self> {
-        if interlace == self.ihdr.interlaced {
-            return None;
-        }
-
-        Some(if interlace {
-            // Convert progressive to interlaced data
-            interlace_image(self)
-        } else {
-            // Convert interlaced to progressive data
-            deinterlace_image(self)
-        })
     }
 
     /// Return the number of channels in the image, based on color type

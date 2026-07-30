@@ -48,7 +48,6 @@ mod error;
 mod evaluate;
 mod filters;
 mod headers;
-mod interlace;
 mod options;
 mod png;
 mod reduction;
