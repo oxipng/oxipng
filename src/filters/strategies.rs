@@ -192,14 +192,15 @@ impl StrategyEvaluator for BigramsEvaluator {
 
 // Bigram entropy, combined from Entropy and Bigrams filters
 struct BigEntEvaluator {
-    seen: [u32; 0x10000],
+    seen: Box<[u32]>,
     touched: Vec<u16>,
     best_size: i32,
 }
 impl BigEntEvaluator {
-    const fn new() -> Self {
+    fn new() -> Self {
         Self {
-            seen: [0; 0x10000],
+            // Ensure the array is constructed directly on the heap
+            seen: vec![0; 0x10000].into(),
             touched: Vec::new(),
             best_size: i32::MIN,
         }
