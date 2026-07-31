@@ -1,5 +1,5 @@
-oxipng 10.1.0
-Losslessly improve compression of PNG files
+oxipng 10.2.0
+A lossless PNG compression optimizer
 
 Usage: oxipng [OPTIONS] <files>...
 
@@ -13,17 +13,17 @@ Options:
           compression. Lower levels are faster, higher levels provide better compression, though
           with increasingly diminishing returns.
           
-              0   => --zc 5  --fast              (filter chosen heuristically)
-              1   => --zc 10 --fast              (filter chosen heuristically)
-              2   => --zc 11 -f 0,1,6,7 --fast
-              3   => --zc 11 -f 0,7,8,9         --brute-level 1 --brute-lines 3
-              4   => --zc 12 -f 0,7,8,9         --brute-level 1 --brute-lines 4
-              5   => --zc 12 -f 0,1,2,5,6,7,8,9 --brute-level 4 --brute-lines 4
-              6   => --zc 12 -f 0-9             --brute-level 5 --brute-lines 8
+              0   => --zc 5  -f 0,5         --fast
+              1   => --zc 10 -f 0,7         --fast
+              2   => --zc 11 -f 0,1,6,7     --fast
+              3   => --zc 11 -f 0,1,6,7,8,9 --fast --brute-level 1 --brute-lines 3
+              4   => --zc 12 -f 0,1,6,7,8,9 --fast --brute-level 1 --brute-lines 4
+              5   => --zc 12 -f 0,1,6,7,8,9        --brute-level 1 --brute-lines 8
+              6   => --zc 12 -f 0-9                --brute-level 5 --brute-lines 8
               max => (stable alias for the maximum level)
           
-          Manually specifying a compression option (zc, f, etc.) will override the optimization
-          preset, regardless of the order you write the arguments.
+          Manually specifying a compression option (zc, f, etc.) will override the value in the
+          optimization preset, regardless of the order you write the arguments.
           
           [default: 2]
 
@@ -61,12 +61,12 @@ Options:
           
           CAUTION: 'all' will convert APNGs to standard PNGs.
           
-          Please note that regardless of any options set, some chunks will necessarily be stripped
-          when invalidated by the optimization:
-              bKGD, sBIT, hIST: Stripped if the color type or bit depth changes.
-              iDOT: Always stripped.
-              caBX: Stripped if it contains C2PA metadata. If explicitly retained by `--keep`,
-              optimization will be aborted.
+          Please note that some chunks will necessarily be stripped when invalidated by the
+          optimization:
+              bKGD, sBIT, hIST: Stripped if the color type or bit depth changes. If explicitly
+              retained by `--keep`, reductions will be disabled.
+              caBX, iDOT: Stripped by default. If explicitly retained by `--keep`, optimization will
+              be aborted.
           
           The default when --strip is not passed is to keep all chunks that remain valid.
 
@@ -135,8 +135,8 @@ Options:
 
       --fast
           Perform a fast compression evaluation of each enabled filter, followed by a single main
-          compression trial of the best result. Recommended if you have more filters enabled than
-          CPU cores.
+          compression trial of the best result. Note that this is enabled by default and will only
+          be disabled at level 5 or above.
 
       --zc <level>
           Deflate compression level (0-12) for main compression trials. The levels here are defined
@@ -151,7 +151,7 @@ Options:
           Do not change color type
 
       --np
-          Do not change color palette
+          Do not convert to indexed and do not modify an existing color palette.
 
       --ng
           Do not change to or from grayscale
