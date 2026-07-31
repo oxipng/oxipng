@@ -12,12 +12,11 @@ const GRAYSCALE_ALPHA: u8 = 4;
 const RGBA: u8 = 6;
 
 fn get_opts(input: &Path) -> (OutFile, oxipng::Options) {
+    // Level 3 is required to enable all transformations
     let options = oxipng::Options {
         force: true,
-        fast_evaluation: false,
-        filters: indexset! {FilterStrategy::NONE},
         interlace: None,
-        ..Default::default()
+        ..oxipng::Options::from_preset(3)
     };
     (OutFile::from_path(input.with_extension("out.png")), options)
 }

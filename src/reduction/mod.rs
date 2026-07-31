@@ -21,11 +21,17 @@ pub(crate) fn perform_reductions(
 ) -> Arc<PngImage> {
     let mut evaluation_added = false;
 
-    // At low compression levels, skip some transformations which are less likely to be effective
-    // This currently affects optimization presets 0-2
-    let cheap = match opts.deflater {
-        Deflater::Libdeflater { compression } => compression < 12 && opts.fast_evaluation,
-        _ => false,
+    // Try to infer the optimization level from the settings
+    // TODO: [v11] Store the level in the settings
+    let effort = match opts.deflater {
+        Deflater::Libdeflater { compression } => match compression {
+            0..=9 => 0,
+            10 => 1,
+            11 if opts.filters.len() <= 4 => 2,
+            11 => 3,
+            _ => 4,
+        },
+        _ => 4,
     };
 
     // If alpha optimization is enabled, clean the alpha channel before continuing
@@ -110,7 +116,7 @@ pub(crate) fn perform_reductions(
 
     // Attempt to convert from indexed to channels
     // This may give a better result due to dropping the PLTE chunk
-    if !cheap
+    if effort >= 3
         && opts.color_type_reduction
         && !deadline.passed()
         && let Some(reduced) =
@@ -143,19 +149,36 @@ pub(crate) fn perform_reductions(
         None
     };
 
-    // Attempt to sort the palette using the ezeng method
-    if !cheap && opts.palette_reduction && !deadline.passed() {
+    // Attempt additional palette sorting techniques
+    if effort >= 2 && opts.palette_reduction && !deadline.passed() {
+        // Collect a list of palettes so we can avoid evaluating the same one twice
+        let mut palettes = vec![baseline.ihdr.color_type.clone()];
         // Make sure we use the `indexed` var as input if it exists
+        // This one doesn't need to be kept in the palette list as the sorters will fail if there's no change
         let input = indexed.as_ref().unwrap_or(&png);
         if let Some(matrix) = CoOccurrenceMatrix::from(input) {
-            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually be
-            // better than the full 255 in some cases
-            if let Some(reduced) = sorted_palette_ezeng(input, &matrix, 50) {
-                // Skip evaluation if the palette is the same as the baseline
-                if reduced.ihdr.color_type != baseline.ihdr.color_type {
-                    eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
-                    evaluation_added = true;
-                }
+            // Attempt to sort the palette using the ezeng method
+            // 50 is a good value for max_swap_dist to keep performance reasonable and can actually
+            // be better than the full 255 in some cases. 1 is faster for low-effort.
+            let max_swap_dist = if effort >= 3 { 50 } else { 1 };
+            if !deadline.passed()
+                && let Some(reduced) = sorted_palette_ezeng(input, &matrix, max_swap_dist)
+                && !palettes.contains(&reduced.ihdr.color_type)
+            {
+                palettes.push(reduced.ihdr.color_type.clone());
+                eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
+                evaluation_added = true;
+            }
+
+            // Attempt to sort the palette using the battiato method
+            if effort >= 4
+                && !deadline.passed()
+                && let Some(reduced) = sorted_palette_battiato(input, &matrix)
+                && !palettes.contains(&reduced.ihdr.color_type)
+            {
+                palettes.push(reduced.ihdr.color_type.clone());
+                eval.try_image_with_description(Arc::new(reduced), "Indexed (battiato sort)");
+                evaluation_added = true;
             }
         }
     }
@@ -164,9 +187,9 @@ pub(crate) fn perform_reductions(
     if opts.bit_depth_reduction && !deadline.passed() {
         // First try the `png` var
         let reduced = reduced_bit_depth_8_or_less(&png);
-        // Then try the `indexed` var, unless we're doing cheap evaluations and already have a reduction
+        // Then try the `indexed` var, unless we're doing low-effort evaluations and already have a reduction
         // Only evaluate this if it's different from the first result (which must be grayscale if it exists)
-        if (!cheap || reduced.is_none())
+        if (effort >= 3 || reduced.is_none())
             && !deadline.passed()
             && let Some(indexed) = indexed.and_then(|png| reduced_bit_depth_8_or_less(&png))
             && reduced.as_ref().is_none_or(|r| r.data != indexed.data)
