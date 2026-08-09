@@ -1,3 +1,13 @@
+## Version 10.2.0
+
+- [Performance] Improve performance of filtering and reductions.
+- [Improvement] Balance changes to level presets for better/faster results.
+- [Improvement] Improve optimization of indexed images.
+- [Improvement] Slightly improve optimization of interlaced images.
+- [Improvement] Make `--keep` more robust, no longer stripping certain chunks regardless.
+- [Misc] Show oxipng version in verbose output.
+- [Misc] Bump minimum Rust version to 1.88.0.
+
 ## Version 10.1.1
 
 - [Performance] Improve Bigrams performance, giving notably faster results at lower levels.

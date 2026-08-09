@@ -4,3 +4,4 @@
 /.idea/
 /node_modules/
 /target/
+/xtask/target
