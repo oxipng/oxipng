@@ -9,16 +9,14 @@ use std::{
     io::{IsTerminal, Write, stdout},
     path::PathBuf,
     process::ExitCode,
-    sync::atomic::{AtomicI64, AtomicUsize, Ordering::AcqRel},
+    sync::atomic::{AtomicI64, Ordering::AcqRel},
     time::Duration,
 };
 
 use clap::ArgMatches;
 mod cli;
+mod progress;
 use indexmap::IndexSet;
-#[cfg(feature = "parallel")]
-use indicatif::ParallelProgressIterator;
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressIterator, ProgressStyle};
 use log::{Level, LevelFilter, error, warn};
 #[cfg(feature = "zopfli")]
 use oxipng::ZopfliOptions;
@@ -90,55 +88,26 @@ fn main() -> ExitCode {
 
     let print_summary = !matches.get_flag("quiet") && !using_stdout;
     let print_progress = print_summary && !is_verbose && stdout().is_terminal();
-    let show_progress_bar = print_progress && matches.get_flag("progress");
     let total_files = files.len();
-    let num_processed = AtomicUsize::new(0);
     let cumulative_saved = AtomicI64::new(0);
 
-    let progress_bar = show_progress_bar.then(|| {
-        let pb =
-            ProgressBar::with_draw_target(Some(total_files as u64), ProgressDrawTarget::stdout());
-        pb.set_style(
-            ProgressStyle::with_template("[{wide_bar:.cyan/blue}] {pos}/{len} | saved {msg}")
-                .unwrap()
-                .progress_chars("=>-"),
-        );
-        pb.set_message(format_bytes(0, false));
-        pb
-    });
-    if print_progress && progress_bar.is_none() {
-        print!("Files processed: 0/{}...", total_files);
-        stdout().flush().ok();
-    }
+    let progress_bar = print_progress.then(|| progress::ProgressBar::new(total_files as u64));
     let process = |(input, output): &(InFile, OutFile)| {
         let result = process_file(input, output, &opts);
-        if print_progress && let Ok((insize, outsize)) = result {
-            if let Some(pb) = &progress_bar {
+        if let Some(pb) = &progress_bar {
+            let message = result.as_ref().ok().map(|&(insize, outsize)| {
                 let delta = insize as i64 - outsize as i64;
                 let saved = cumulative_saved.fetch_add(delta, AcqRel) + delta;
-                pb.set_message(format_bytes(saved, false));
-            } else {
-                let value = num_processed.fetch_add(1, AcqRel) + 1;
-                print!("\rFiles processed: {}/{}...", value, total_files);
-                stdout().flush().ok();
-            }
+                format_bytes(saved, false)
+            });
+            pb.inc(message);
         }
         result
     };
-    let results: Vec<OptimizationResult> = match (&progress_bar, matches.get_flag("parallel-files"))
-    {
-        (Some(pb), true) => files
-            .par_iter()
-            .map(process)
-            .progress_with(pb.clone())
-            .collect(),
-        (Some(pb), false) => files
-            .iter()
-            .map(process)
-            .progress_with(pb.clone())
-            .collect(),
-        (None, true) => files.par_iter().map(process).collect(),
-        (None, false) => files.iter().map(process).collect(),
+    let results: Vec<OptimizationResult> = if matches.get_flag("parallel-files") {
+        files.par_iter().map(process).collect()
+    } else {
+        files.iter().map(process).collect()
     };
 
     if let Some(pb) = progress_bar {

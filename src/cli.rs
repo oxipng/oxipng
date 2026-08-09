@@ -235,21 +235,6 @@ losslessly.")
                 .conflicts_with("stdout"),
         )
         .arg(
-            Arg::new("progress")
-                .help("Show a progress bar with cumulative size savings")
-                .long_help("\
-Show a progress bar while processing files, tracking how many files have completed along \
-with the cumulative reduction in file size so far.
-
-Requires an interactive terminal, and has no effect when combined with '--verbose', \
-'--quiet', or '--stdout'.")
-                .long("progress")
-                .action(ArgAction::SetTrue)
-                .conflicts_with("verbose")
-                .conflicts_with("quiet")
-                .conflicts_with("stdout"),
-        )
-        .arg(
             Arg::new("filters")
                 .help("Filters to try (0-9; see '--help' for details)")
                 .long_help("\
