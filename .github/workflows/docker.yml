@@ -23,14 +23,16 @@ concurrency:
   group: docker-${{ github.sha }}-${{ github.ref_type }}-${{ github.head_ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   build:
-    uses: docker/github-builder/.github/workflows/build.yml@v1
+    uses: docker/github-builder/.github/workflows/build.yml@a492c6d04fd3315f67230809b44d60cc0acd50b3 # v1.16.0
     permissions:
       contents: read
-      packages: write
-      id-token: write
-      attestations: write
+      packages: write # Push the image to ghcr.io
+      id-token: write # Create the OIDC token used for attestations
+      attestations: write # Attach provenance and SBOM attestations to the image
     with:
       output: image
       platforms: linux/amd64,linux/arm64

@@ -13,9 +13,7 @@ concurrency:
   group: ci-${{ github.sha }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  security-events: write
+permissions: {}
 
 jobs:
   ci:
@@ -26,6 +24,10 @@ jobs:
 
     # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
     if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
+
+    permissions:
+      contents: read
+      security-events: write # Upload the Clippy SARIF report to code scanning
 
     strategy:
       fail-fast: false
@@ -67,18 +69,20 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install musl development files
         if: endsWith(matrix.target, '-musl')
+        env:
+          APT_ARCH: ${{ matrix.target-apt-arch }}
         run: |
           sudo apt-get -yq update
-          sudo apt-get -yq install musl-tools musl-dev:${{ matrix.target-apt-arch }}
+          sudo apt-get -yq install musl-tools "musl-dev:$APT_ARCH"
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
           toolchain: nightly
           target: ${{ env.CARGO_BUILD_TARGET }}
@@ -87,23 +91,15 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@nextest
-
-      - name: Install cargo-hack
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@cargo-hack
-
-      - name: Install clippy-sarif
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@v2.85.10
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         with:
-          tool: clippy-sarif
+          tool: nextest
 
-      - name: Install sarif-fmt
+      - name: Install lint tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@v2.85.10
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         with:
-          tool: sarif-fmt
+          tool: cargo-hack,clippy-sarif,sarif-fmt
 
       - name: Run rustfmt
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -138,7 +134,7 @@ jobs:
           RUSTFLAGS: "-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort"
 
       - name: Upload CLI binary as artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Oxipng binary (${{ matrix.target }})
           path: |
@@ -146,7 +142,7 @@ jobs:
             target/${{ env.CARGO_BUILD_TARGET }}/release/oxipng.exe
 
       - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v4.37.6
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
         if: always() && matrix.target == 'x86_64-unknown-linux-gnu'
         continue-on-error: true
         with:
@@ -162,23 +158,54 @@ jobs:
     # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
     if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install MSRV Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
           toolchain: 1.88.0
           cache-bin: false
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@nextest
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        with:
+          tool: nextest
 
       - name: Run tests
         run: |
           cargo nextest run --release --features sanity-checks
           cargo test --doc --release --features sanity-checks
+
+  zizmor:
+    name: Workflow lint
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Prevent tags and in-repo PRs from triggering this workflow more than once for a commit
+    if: github.ref_type != 'tag' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork)
+
+    permissions:
+      contents: read
+      security-events: write # Upload the zizmor SARIF report to code scanning
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          # Fork PRs get a read-only token, so annotate inline instead of uploading SARIF
+          advanced-security: ${{ github.event_name != 'pull_request' }}
+          annotations: ${{ github.event_name == 'pull_request' }}

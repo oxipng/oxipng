@@ -10,9 +10,7 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  actions: read
-  contents: write
+permissions: {}
 
 jobs:
   deploy:
@@ -23,6 +21,10 @@ jobs:
 
     # Prevent job from running on forks
     if: ${{ !github.event.repository.fork }}
+
+    permissions:
+      actions: read # Download the CI run artifacts
+      contents: write # Create the release
 
     strategy:
       # Execute one job at a time to avoid potential race conditions in the
@@ -42,18 +44,20 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
           toolchain: nightly
-          cache-bin: false
-          cache-shared-key: cache
+          # Nothing is compiled here, so the cache is dead weight and a poisoning vector
+          cache: false
 
       - name: Install cargo-deb
         if: endsWith(matrix.target, '-linux-gnu')
-        uses: taiki-e/install-action@v2.85.10
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         with:
           tool: cargo-deb
 
@@ -64,7 +68,7 @@ jobs:
           jq -r '.packages[] | select(.name == "oxipng").version')" >> "$GITHUB_OUTPUT"
 
       - name: Retrieve ${{ matrix.target }} binary
-        uses: dawidd6/action-download-artifact@v21
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           workflow: oxipng.yml
           commit: ${{ github.sha }}
@@ -76,13 +80,16 @@ jobs:
 
       - name: Build archives
         working-directory: target
+        env:
+          VERSION: ${{ steps.oxipngMeta.outputs.version }}
+          TARGET: ${{ matrix.target }}
         run: |
-          ARCHIVE_NAME="oxipng-${{ steps.oxipngMeta.outputs.version }}-${{ matrix.target }}"
+          ARCHIVE_NAME="oxipng-$VERSION-$TARGET"
 
           mkdir "$ARCHIVE_NAME"
           cp ../CHANGELOG.md ../README.md ../MANUAL.txt "$ARCHIVE_NAME"
 
-          case '${{ matrix.target }}' in
+          case "$TARGET" in
             *-windows-*)
               cp ../LICENSE "$ARCHIVE_NAME/LICENSE.txt"
               cp oxipng.exe "$ARCHIVE_NAME"
@@ -119,20 +126,27 @@ jobs:
           # - <https://man7.org/linux/man-pages/man1/dpkg-shlibdeps.1.html> ("Errors" section)
           # - <https://github.com/kornelski/cargo-deb/issues/21>
           LD_LIBRARY_PATH: /usr/aarch64-linux-gnu/lib
+          TARGET: ${{ matrix.target }}
         run: |
-          mkdir -p "target/${{ matrix.target }}/release"
-          mv target/oxipng "target/${{ matrix.target }}/release"
-          cargo deb --target "${{ matrix.target }}" --no-build --no-strip
+          mkdir -p "target/$TARGET/release"
+          mv target/oxipng "target/$TARGET/release"
+          cargo deb --target "$TARGET" --no-build --no-strip
 
       - name: Create release notes
         run: tail -n +3 CHANGELOG.md | sed -e '/^$/,$d' > RELEASE_NOTES.txt
 
       - name: Create release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: v${{ steps.oxipngMeta.outputs.version }}
-          body_path: RELEASE_NOTES.txt
-          files: |
-            target/*.zip
-            target/*.tar.gz
-            target/${{ matrix.target }}/debian/*.deb
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.oxipngMeta.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          # The first matrix job creates the release, the rest just add assets
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag \
+              --title "v$VERSION" --notes-file RELEASE_NOTES.txt
+          fi
+
+          shopt -s nullglob
+          gh release upload "$GITHUB_REF_NAME" --clobber \
+            target/*.zip target/*.tar.gz "target/$TARGET"/debian/*.deb
