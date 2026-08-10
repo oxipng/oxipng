@@ -53,7 +53,7 @@ jobs:
 
       - name: Install cargo-deb
         if: endsWith(matrix.target, '-linux-gnu')
-        uses: taiki-e/install-action@v2.85.5
+        uses: taiki-e/install-action@v2.85.10
         with:
           tool: cargo-deb
 
