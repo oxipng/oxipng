@@ -93,7 +93,7 @@ jobs:
             *-windows-*)
               cp ../LICENSE "$ARCHIVE_NAME/LICENSE.txt"
               cp oxipng.exe "$ARCHIVE_NAME"
-              zip "${ARCHIVE_NAME}.zip" "$ARCHIVE_NAME"/*;;
+              zip -9 "${ARCHIVE_NAME}.zip" "$ARCHIVE_NAME"/*;;
             *)
               cp ../LICENSE "$ARCHIVE_NAME"
               cp oxipng "$ARCHIVE_NAME"
@@ -103,7 +103,7 @@ jobs:
               # Related issue:
               # https://github.com/oxipng/oxipng/issues/575
               chmod ugo+x "$ARCHIVE_NAME"/oxipng
-              tar -vczf "${ARCHIVE_NAME}.tar.gz" "$ARCHIVE_NAME"/*;;
+              tar -I 'gzip -9' -vcf "${ARCHIVE_NAME}.tar.gz" "$ARCHIVE_NAME"/*;;
           esac
 
       - name: Install AArch64 libc components
