@@ -1,3 +1,5 @@
+// This module is sourced by an `include!` macro in the `xtask` package.
+
 use std::{num::NonZeroU64, path::PathBuf};
 
 use clap::builder::Styles;

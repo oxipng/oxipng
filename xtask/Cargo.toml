@@ -6,6 +6,8 @@ edition = "2021"
 publish = false
 
 [dependencies]
-clap = "4.5.21"
-clap_mangen = "0.2.24"
+cargo_metadata = "0.23.1"
+clap = { version = "4.6.6", features = ["string"] }
+clap_mangen = "0.3.3"
 parse-size = "1.1.0"
+tz-rs = "0.7.3"
