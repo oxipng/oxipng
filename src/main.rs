@@ -9,12 +9,13 @@ use std::{
     io::{IsTerminal, Write, stdout},
     path::PathBuf,
     process::ExitCode,
-    sync::atomic::{AtomicUsize, Ordering::AcqRel},
+    sync::atomic::{AtomicI64, Ordering::AcqRel},
     time::Duration,
 };
 
 use clap::ArgMatches;
 mod cli;
+mod progress;
 use indexmap::IndexSet;
 use log::{Level, LevelFilter, error, warn};
 #[cfg(feature = "zopfli")]
@@ -88,17 +89,18 @@ fn main() -> ExitCode {
     let print_summary = !matches.get_flag("quiet") && !using_stdout;
     let print_progress = print_summary && !is_verbose && stdout().is_terminal();
     let total_files = files.len();
-    let num_processed = AtomicUsize::new(0);
-    if print_progress {
-        print!("Files processed: 0/{}...", total_files);
-        stdout().flush().ok();
-    }
+    let cumulative_saved = AtomicI64::new(0);
+
+    let progress_bar = print_progress.then(|| progress::ProgressBar::new(total_files as u64));
     let process = |(input, output): &(InFile, OutFile)| {
         let result = process_file(input, output, &opts);
-        if print_progress && matches!(result, OptimizationResult::Ok(_)) {
-            let value = num_processed.fetch_add(1, AcqRel) + 1;
-            print!("\rFiles processed: {}/{}...", value, total_files);
-            stdout().flush().ok();
+        if let Some(pb) = &progress_bar {
+            let message = result.as_ref().ok().map(|&(insize, outsize)| {
+                let delta = insize as i64 - outsize as i64;
+                let saved = cumulative_saved.fetch_add(delta, AcqRel) + delta;
+                format_bytes(saved, false)
+            });
+            pb.inc(message);
         }
         result
     };
@@ -107,6 +109,10 @@ fn main() -> ExitCode {
     } else {
         files.iter().map(process).collect()
     };
+
+    if let Some(pb) = progress_bar {
+        pb.finish_and_clear();
+    }
 
     // Collect stats
     let mut num_succeeded = 0;
