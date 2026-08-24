@@ -95,13 +95,13 @@ jobs:
 
       - name: Install clippy-sarif
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@v2.85.10
+        uses: taiki-e/install-action@v2.86.5
         with:
           tool: clippy-sarif
 
       - name: Install sarif-fmt
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@v2.85.10
+        uses: taiki-e/install-action@v2.86.5
         with:
           tool: sarif-fmt
 
