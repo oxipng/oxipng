@@ -277,9 +277,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.14.0"
+version = "2.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+checksum = "07aa2048142242915a31d35844fb311e0e53fcca590c3a0a40dcf1b841fa09eb"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -306,9 +306,9 @@ checksum = "52ff2c0fe9bc6cb6b14a0592c2ff4fa9ceb83eea9db979b0487cd054946a2b8f"
 
 [[package]]
 name = "libdeflate-sys"
-version = "1.25.2"
+version = "1.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72753e0008ea87963d2f0770042d0df7abe51fafbb8dcaf618ac440f2f1fec0a"
+checksum = "6949d73714ba8c32d2757405b89c94e427f64f078a4041debe07e1b8e9e850e9"
 dependencies = [
  "cc",
  "pkg-config",
@@ -316,9 +316,9 @@ dependencies = [
 
 [[package]]
 name = "libdeflater"
-version = "1.25.2"
+version = "1.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1ee41cf6fb1bb6030dfb59ffb7bc01ab26aade44142084c87f0fc7a1658fe71"
+checksum = "0b72b274104f747cb65358c918e38c6cd4a69937937a36c8ad3cfd516c9c471e"
 dependencies = [
  "libdeflate-sys",
 ]
@@ -331,9 +331,9 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "log"
-version = "0.4.33"
+version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "memchr"
