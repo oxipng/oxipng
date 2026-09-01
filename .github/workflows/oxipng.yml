@@ -91,13 +91,13 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
         with:
           tool: nextest
 
       - name: Install lint tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
         with:
           tool: cargo-hack,clippy-sarif,sarif-fmt
 
@@ -143,7 +143,7 @@ jobs:
           compression-level: 9
 
       - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
         if: always() && matrix.target == 'x86_64-unknown-linux-gnu'
         continue-on-error: true
         with:
@@ -176,7 +176,7 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
+        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
         with:
           tool: nextest
 
