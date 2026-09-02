@@ -1,4 +1,4 @@
-oxipng 10.2.0
+oxipng 10.2.1
 A lossless PNG compression optimizer
 
 Usage: oxipng [OPTIONS] <files>...

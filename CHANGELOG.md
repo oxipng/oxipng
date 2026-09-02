@@ -1,3 +1,7 @@
+## Version 10.2.1
+
+- [Build] Fix package metadata shown in generated man page.
+
 ## Version 10.2.0
 
 - [Performance] Improve performance of filtering and reductions.
