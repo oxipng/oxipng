@@ -159,6 +159,9 @@ Other contributions (such as improving documentation or translations) are also w
 An independent benchmark is linked here with permission by the author:\
 [oxipng and friends: A comparison of PNG optimization tools](https://op111.net/posts/2025/09/png-compression-oxipng-optipng-fileoptimizer-cwebp/)
 
+`cargo bench --bench tradeoff` times `-o 0` through `-o 6` on a test PNG and
+prints time vs % saved so the preset tradeoff is visible without staring at numbers.
+
 ## License
 
 Oxipng is open-source software, distributed under the MIT license.
