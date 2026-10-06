@@ -91,13 +91,13 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
+        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
           tool: nextest
 
       - name: Install lint tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
+        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
           tool: cargo-hack,clippy-sarif,sarif-fmt
 
@@ -143,7 +143,7 @@ jobs:
           compression-level: 9
 
       - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         if: always() && matrix.target == 'x86_64-unknown-linux-gnu'
         continue-on-error: true
         with:
@@ -176,7 +176,7 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@b6ff580856c41316412a0b9b60540fbc6f8c82cc # v2.86.7
+        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
         with:
           tool: nextest
 
@@ -205,7 +205,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
         with:
           # Fork PRs get a read-only token, so annotate inline instead of uploading SARIF
           advanced-security: ${{ github.event_name != 'pull_request' }}
