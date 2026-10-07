@@ -23,6 +23,9 @@ pub enum FilterStrategy {
         /// The compression level to use (1-12)
         level: u8,
     },
+    /// Per section of the image, the filters of whichever of the strategies above compresses
+    /// it smallest (Brute with 4 lines at level 1)
+    Segmented,
     /// Predefined filter for each row
     Predefined(Vec<RowFilter>),
 }
@@ -58,6 +61,7 @@ impl Display for FilterStrategy {
             Self::Bigrams => "Bigrams".fmt(f),
             Self::BigEnt => "BigEnt".fmt(f),
             Self::Brute { .. } => "Brute".fmt(f),
+            Self::Segmented => "Segmented".fmt(f),
             Self::Predefined(_) => "Predefined".fmt(f),
         }
     }

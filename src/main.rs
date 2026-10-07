@@ -31,7 +31,7 @@ fn main() -> ExitCode {
         // Set the value parser for filters which isn't appropriate to do in the build_command function
         .mut_arg("filters", |arg| {
             arg.value_parser(|x: &str| {
-                parse_numeric_range_opts(x, 0, 9).map_err(|_| "Invalid option for filters")
+                parse_numeric_range_opts(x, 0, 10).map_err(|_| "Invalid option for filters")
             })
         })
         .after_help("Run `oxipng --help` to see full details of all options")
@@ -301,6 +301,7 @@ fn parse_opts_into_struct(
                     num_lines: brute_lines.unwrap_or(3),
                     level: brute_level.unwrap_or(1),
                 },
+                10 => FilterStrategy::Segmented,
                 _ => unreachable!(),
             })
             .collect();

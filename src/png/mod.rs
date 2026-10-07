@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub(crate) mod scan_lines;
+mod segmented;
 
 use self::scan_lines::ScanLines;
 
@@ -337,6 +338,9 @@ impl PngImage {
         strategy: FilterStrategy,
         optimize_alpha: bool,
     ) -> (Vec<u8>, FilterStrategy) {
+        if strategy == FilterStrategy::Segmented {
+            return self.filter_segmented(optimize_alpha);
+        }
         let mut output = Vec::with_capacity(self.ihdr.raw_data_size());
         let bpp = self.bytes_per_channel() * self.channels_per_pixel();
         // If alpha optimization is enabled, determine how many bytes of alpha there are per pixel

@@ -55,3 +55,11 @@ fn filters_brute(b: &mut Bencher) {
         )
     });
 }
+
+#[bench]
+fn filters_segmented(b: &mut Bencher) {
+    let input = test::black_box(PathBuf::from("tests/files/rgb_8_should_be_rgb_8.png"));
+    let png = PngData::new(&input, &Options::default()).unwrap();
+
+    b.iter(|| png.raw.filter_image(FilterStrategy::Segmented, false));
+}

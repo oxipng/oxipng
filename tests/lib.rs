@@ -76,6 +76,20 @@ fn optimize_apng() {
 }
 
 #[test]
+fn optimize_apng_segmented() {
+    let original = fs::read("tests/files/apng_file.png").unwrap();
+    let opts = Options {
+        filters: indexset! {FilterStrategy::Segmented},
+        ..Options::default()
+    };
+    let result = oxipng::optimize_from_memory(&original, &opts).unwrap();
+    let png = oxipng::internal_tests::PngData::from_slice(&result, &opts).unwrap();
+    assert!(!png.frames.is_empty());
+    #[cfg(feature = "sanity-checks")]
+    assert!(oxipng::internal_tests::validate_output(&result, &original));
+}
+
+#[test]
 fn optimize_srgb_icc() {
     let file = fs::read("tests/files/badsrgb.png").unwrap();
     let mut opts = Options::default();

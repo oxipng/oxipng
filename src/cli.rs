@@ -238,7 +238,7 @@ losslessly.")
         )
         .arg(
             Arg::new("filters")
-                .help("Filters to try (0-9; see '--help' for details)")
+                .help("Filters to try (0-10; see '--help' for details)")
                 .long_help("\
 Perform compression trials with each of the given filter types. You can specify a \
 comma-separated list, or a range of values. E.g. '-f 0-3' is the same as '-f 0,1,2,3'.
@@ -256,6 +256,8 @@ Heuristic strategies (try to find the best delta filter for each line)
     7  =>  Bigrams   Lowest count of distinct bigrams
     8  =>  BigEnt    Smallest Shannon entropy of bigrams
     9  =>  Brute     Smallest compressed size (slow)
+    10 =>  Segmented Per section, the filters of whichever of 0-9 compresses smallest
+                     (slow; Brute with 4 lines at level 1)
 
 The default value depends on the optimization level preset.")
                 .short('f')
