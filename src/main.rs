@@ -82,7 +82,7 @@ fn main() -> ExitCode {
     // Include version info in verbose output
     let is_verbose = matches.get_count("verbose") > 0;
     if is_verbose && !using_stdout {
-        println!("{} {}\n", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+        println!("{} {}\n", env!("CARGO_PKG_NAME"), cli::version());
     }
 
     let print_summary = !matches.get_flag("quiet") && !using_stdout;

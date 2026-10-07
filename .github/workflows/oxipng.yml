@@ -128,15 +128,22 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cargo doc --release --no-deps
 
+      - name: Get the build ID
+        id: build-id
+        uses: $/.github/actions/build-id
+        with:
+          target: ${{ matrix.target }}
+
       - name: Build CLI binary
         run: cargo build --release -Zbuild-std
         env:
           RUSTFLAGS: "-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort"
+          OXIPNG_BUILD_REVISION: ${{ steps.build-id.outputs.short-sha }}
 
       - name: Upload CLI binary as artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: Oxipng binary (${{ matrix.target }})
+          name: ${{ steps.build-id.outputs.artifact-name }}
           path: |
             target/${{ env.CARGO_BUILD_TARGET }}/release/oxipng
             target/${{ env.CARGO_BUILD_TARGET }}/release/oxipng.exe

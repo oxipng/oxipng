@@ -37,7 +37,10 @@ fn build_manpages() -> Result<(), Box<dyn Error>> {
     // `include!` evaluation
     let package_cmd = build_command()
         .name(package_meta.name.to_string())
-        .version(package_meta.version.to_string())
+        .version(build_revision().map_or_else(
+            || package_meta.version.to_string(),
+            |revision| format!("{} ({revision})", package_meta.version),
+        ))
         .author(package_meta.authors.first().unwrap_or(&String::new()))
         .about(package_meta.description.unwrap_or_default());
 
