@@ -387,18 +387,9 @@ fn optimize_raw(
     deadline: Arc<Deadline>,
     max_size: Option<usize>,
 ) -> Option<Candidate> {
-    // Libdeflate has four algorithms: 0 = 'uncompressed', 1-4 = 'greedy', 5-7 = 'lazy', 8-9 = 'lazy2', 10-12 = 'near-optimal'
-    // 5 is the minimumm required for a decent evaluation result (o0 and o1)
-    // 7 is only slightly slower than 5 and improves evaluation of filters in 'fast' mode (o2)
-    // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
-    // 9 is not appreciably better than 8
-    // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
-    let compression = match opts.deflater {
-        Deflater::Libdeflater { compression } if compression < 11 => 5.min(compression),
-        _ if opts.filters.len() <= 4 => 7,
-        _ => 8,
+    let eval_deflater = Deflater::Libdeflater {
+        compression: evaluation_level(opts),
     };
-    let eval_deflater = Deflater::Libdeflater { compression };
     // If only one or two filters are given, use them for evaluations
     let eval_filters = if opts.filters.len() <= 2 {
         opts.filters.clone()
@@ -454,6 +445,44 @@ fn optimize_raw(
     None
 }
 
+/// The libdeflate level used to evaluate reductions and filters
+fn evaluation_level(opts: &Options) -> u8 {
+    // Libdeflate has four algorithms: 0 = 'uncompressed', 1-4 = 'greedy', 5-7 = 'lazy', 8-9 = 'lazy2', 10-12 = 'near-optimal'
+    // 5 is the minimumm required for a decent evaluation result (o0 and o1)
+    // 7 is only slightly slower than 5 and improves evaluation of filters in 'fast' mode (o2)
+    // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
+    // 9 is not appreciably better than 8
+    // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
+    match opts.deflater {
+        Deflater::Libdeflater { compression } if compression < 11 => 5.min(compression),
+        _ if opts.filters.len() <= 4 => 7,
+        _ => 8,
+    }
+}
+
+/// Filters chosen section by section from all strategies, as a predefined filter, and the
+/// strategy that won most of the image. With one or two filters, the reductions were already
+/// evaluated with all of them.
+fn sections_with_dominant(
+    image: &PngImage,
+    opts: &Options,
+    deadline: &Deadline,
+) -> Option<(FilterStrategy, FilterStrategy)> {
+    if opts.filters.len() <= 2 || deadline.passed() {
+        return None;
+    }
+    let sections =
+        image.filter_by_sections(&opts.filters, opts.optimize_alpha, evaluation_level(opts))?;
+    let dominant = opts.filters[sections.dominant()].clone();
+    debug!(
+        "Filters chosen in {} sections, {}% {}",
+        sections.sections,
+        100 * sections.won[sections.dominant()] / sections.won.iter().sum::<usize>(),
+        dominant
+    );
+    Some((FilterStrategy::Predefined(sections.filters), dominant))
+}
+
 /// Perform compression trials
 fn perform_trials(
     image: Arc<PngImage>,
@@ -469,7 +498,15 @@ fn perform_trials(
     if fast_eval {
         // Perform a fast evaluation of selected filters followed by a single main compression trial
 
-        if eval_result.is_some() {
+        let combined = sections_with_dominant(&image, opts, &deadline);
+        if let Some((filter, _)) = &combined {
+            // Rather than each filter for the whole image, evaluate the filters chosen by section,
+            // against the filters for the reductions (already evaluated if there were any)
+            filters = indexset! {filter.clone()};
+            if eval_result.is_none() {
+                filters.extend(eval_filters.iter().cloned());
+            }
+        } else if eval_result.is_some() {
             // Some filters have already been evaluated, we don't need to try them again
             filters = filters.difference(&eval_filters).cloned().collect();
         }
@@ -511,17 +548,43 @@ fn perform_trials(
                 Err(_) => (),
             }
         }
-        return Some(result);
+        return Some(report_dominant(result, combined));
     }
 
     // Perform full compression trials of selected filters and determine the best
     debug!("Trying {} filters with {}", filters.len(), opts.deflater);
-    let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
+    let eval = Evaluator::new(
+        deadline.clone(),
+        filters,
+        opts.deflater,
+        opts.optimize_alpha,
+        true,
+    );
     if let Some(max_size) = max_size {
         eval.set_best_size(max_size);
     }
-    eval.try_image(image);
+    eval.try_image(image.clone());
+    // While those run, choose the filters by section: one more trial
+    let combined = sections_with_dominant(&image, opts, &deadline);
+    if let Some((filter, _)) = &combined {
+        eval.try_image_with_filters(image, indexset! {filter.clone()});
+    }
     eval.get_best_candidate()
+        .map(|result| report_dominant(result, combined))
+}
+
+/// The result's filter is used for printing and for APNG frames: report the strategy that won
+/// most of the image rather than the filters chosen by section
+fn report_dominant(
+    mut result: Candidate,
+    combined: Option<(FilterStrategy, FilterStrategy)>,
+) -> Candidate {
+    if let Some((filter, dominant)) = combined
+        && result.filter == filter
+    {
+        result.filter = dominant;
+    }
+    result
 }
 
 #[derive(Debug)]
@@ -611,7 +674,10 @@ fn recompress_frames(
             ihdr.width = frame.width;
             ihdr.height = frame.height;
             let image = PngImage::new(ihdr, &frame.data)?;
-            let (filtered, _) = image.filter_image(filter.clone(), opts.optimize_alpha);
+            // Like the main image, a frame of several sections gets its filters by section
+            let filter = sections_with_dominant(&image, opts, &deadline)
+                .map_or_else(|| filter.clone(), |(sections, _)| sections);
+            let (filtered, _) = image.filter_image(filter, opts.optimize_alpha);
             let max_size = Some(frame.data.len() - 1);
             if let Ok(data) = opts.deflater.deflate(&filtered, max_size) {
                 debug!(
