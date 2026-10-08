@@ -387,18 +387,9 @@ fn optimize_raw(
     deadline: Arc<Deadline>,
     max_size: Option<usize>,
 ) -> Option<Candidate> {
-    // Libdeflate has four algorithms: 0 = 'uncompressed', 1-4 = 'greedy', 5-7 = 'lazy', 8-9 = 'lazy2', 10-12 = 'near-optimal'
-    // 5 is the minimumm required for a decent evaluation result (o0 and o1)
-    // 7 is only slightly slower than 5 and improves evaluation of filters in 'fast' mode (o2)
-    // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
-    // 9 is not appreciably better than 8
-    // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
-    let compression = match opts.deflater {
-        Deflater::Libdeflater { compression } if compression < 11 => 5.min(compression),
-        _ if opts.filters.len() <= 4 => 7,
-        _ => 8,
+    let eval_deflater = Deflater::Libdeflater {
+        compression: evaluation_level(opts),
     };
-    let eval_deflater = Deflater::Libdeflater { compression };
     // If only one or two filters are given, use them for evaluations
     let eval_filters = if opts.filters.len() <= 2 {
         opts.filters.clone()
@@ -452,6 +443,21 @@ fn optimize_raw(
         return Some(result);
     }
     None
+}
+
+/// The libdeflate level used to evaluate reductions and filters
+fn evaluation_level(opts: &Options) -> u8 {
+    // Libdeflate has four algorithms: 0 = 'uncompressed', 1-4 = 'greedy', 5-7 = 'lazy', 8-9 = 'lazy2', 10-12 = 'near-optimal'
+    // 5 is the minimumm required for a decent evaluation result (o0 and o1)
+    // 7 is only slightly slower than 5 and improves evaluation of filters in 'fast' mode (o2)
+    // 8 is a little slower but not noticeably when used only for reductions (o3 and higher)
+    // 9 is not appreciably better than 8
+    // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
+    match opts.deflater {
+        Deflater::Libdeflater { compression } if compression < 11 => 5.min(compression),
+        _ if opts.filters.len() <= 4 => 7,
+        _ => 8,
+    }
 }
 
 /// Perform compression trials
