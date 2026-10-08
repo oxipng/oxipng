@@ -124,10 +124,24 @@ impl Evaluator {
 
     /// Check if the image is smaller than others, with a description for verbose mode
     pub fn try_image_with_description(&self, image: Arc<PngImage>, description: &str) {
+        self.try_filters(image, self.filters.clone(), description);
+    }
+
+    /// Check if the image is smaller than others, with other filters than the evaluator's
+    pub fn try_image_with_filters(&self, image: Arc<PngImage>, filters: IndexSet<FilterStrategy>) {
+        let description = image.ihdr.color_type.to_string();
+        self.try_filters(image, filters, &description);
+    }
+
+    fn try_filters(
+        &self,
+        image: Arc<PngImage>,
+        filters: IndexSet<FilterStrategy>,
+        description: &str,
+    ) {
         let nth = self.nth.fetch_add(1, SeqCst);
         // These clones are only cheap refcounts
         let deadline = self.deadline.clone();
-        let filters = self.filters.clone();
         let deflater = self.deflater;
         let optimize_alpha = self.optimize_alpha;
         let final_round = self.final_round;

@@ -553,12 +553,24 @@ fn perform_trials(
 
     // Perform full compression trials of selected filters and determine the best
     debug!("Trying {} filters with {}", filters.len(), opts.deflater);
-    let eval = Evaluator::new(deadline, filters, opts.deflater, opts.optimize_alpha, true);
+    let eval = Evaluator::new(
+        deadline.clone(),
+        filters,
+        opts.deflater,
+        opts.optimize_alpha,
+        true,
+    );
     if let Some(max_size) = max_size {
         eval.set_best_size(max_size);
     }
-    eval.try_image(image);
+    eval.try_image(image.clone());
+    // While those run, choose the filters by section: one more trial
+    let combined = sections_with_dominant(&image, opts, &deadline);
+    if let Some((filter, _)) = &combined {
+        eval.try_image_with_filters(image, indexset! {filter.clone()});
+    }
     eval.get_best_candidate()
+        .map(|result| report_dominant(result, combined))
 }
 
 /// The result's filter is used for printing and for APNG frames: report the strategy that won
