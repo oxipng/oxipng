@@ -28,6 +28,7 @@ fn test_it_converts(
     let input = PathBuf::from(input);
     let (output, mut opts) = get_opts(&input);
     opts.optimize_alpha = optimize_alpha;
+    opts.max_candidates = 1;
     let png = PngData::new(&input, &opts).unwrap();
 
     assert_eq!(png.raw.ihdr.color_type.png_header_code(), color_type_in);

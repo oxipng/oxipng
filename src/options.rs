@@ -149,6 +149,8 @@ pub struct Options {
     ///
     /// Default: `true`
     pub fast_evaluation: bool,
+    pub max_candidates: usize,
+    pub candidate_threshold: f64,
     /// Maximum amount of time to spend on optimizations.
     /// Further potential optimizations are skipped if the timeout is exceeded.
     ///
@@ -221,6 +223,8 @@ impl Options {
                 level: 1,
             },
         };
+        self.max_candidates = 2;
+        self.candidate_threshold = 0.05;
         self
     }
 
@@ -237,11 +241,12 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_candidates = 4;
+        self.candidate_threshold = 0.05;
         self
     }
 
     fn apply_preset_5(mut self) -> Self {
-        self.fast_evaluation = false;
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
@@ -254,11 +259,12 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_candidates = 8;
+        self.candidate_threshold = 0.1;
         self
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.fast_evaluation = false;
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
@@ -275,6 +281,8 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_candidates = 16;
+        self.candidate_threshold = 0.2;
         self
     }
 }
@@ -302,6 +310,8 @@ impl Default for Options {
             strip: StripChunks::None,
             deflater: Deflater::Libdeflater { compression: 11 },
             fast_evaluation: true,
+            max_candidates: 1,
+            candidate_threshold: 0.0,
             timeout: None,
             max_decompressed_size: None,
         }
