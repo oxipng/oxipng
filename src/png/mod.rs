@@ -12,7 +12,10 @@ use crate::{
     headers::*,
 };
 
+mod combine;
 pub(crate) mod scan_lines;
+
+pub use self::combine::SectionFilters;
 
 use self::scan_lines::ScanLines;
 
