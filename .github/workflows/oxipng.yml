@@ -91,13 +91,13 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: nextest
 
       - name: Install lint tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: cargo-hack,clippy-sarif,sarif-fmt
 
@@ -134,7 +134,7 @@ jobs:
           RUSTFLAGS: "-Zlocation-detail=none -Zunstable-options -Cpanic=immediate-abort"
 
       - name: Upload CLI binary as artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Oxipng binary (${{ matrix.target }})
           path: |
@@ -143,7 +143,7 @@ jobs:
           compression-level: 9
 
       - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: always() && matrix.target == 'x86_64-unknown-linux-gnu'
         continue-on-error: true
         with:
@@ -176,7 +176,7 @@ jobs:
           cache-shared-key: cache
 
       - name: Install nextest
-        uses: taiki-e/install-action@9983c65e42da123ff25d1f78505eb6de315aa172 # v2.87.20
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: nextest
 
@@ -205,7 +205,7 @@ jobs:
           persist-credentials: false
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           # Fork PRs get a read-only token, so annotate inline instead of uploading SARIF
           advanced-security: ${{ github.event_name != 'pull_request' }}
