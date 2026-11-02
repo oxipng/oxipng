@@ -1,3 +1,5 @@
+use rgb::RGB16;
+
 use crate::{
     colors::{BitDepth, ColorType},
     headers::IhdrData,
@@ -27,6 +29,17 @@ pub fn reduced_bit_depth_16_to_8(png: &PngImage, force_scale: bool) -> Option<Pn
         return None;
     }
 
+    // Every sample has equal high and low bytes, so a transparency value that doesn't
+    // is unused - set it to None
+    let color_type = reduced_trns_16_to_8(&png.ihdr.color_type, |trns| {
+        let [high, low] = trns.to_be_bytes();
+        if high == low {
+            Some(u16::from(low))
+        } else {
+            None
+        }
+    });
+
     Some(PngImage {
         data: png
             .data
@@ -36,7 +49,7 @@ pub fn reduced_bit_depth_16_to_8(png: &PngImage, force_scale: bool) -> Option<Pn
             .map(|pair| pair[0])
             .collect(),
         ihdr: IhdrData {
-            color_type: png.ihdr.color_type.clone(),
+            color_type,
             bit_depth: BitDepth::Eight,
             ..png.ihdr
         },
@@ -56,25 +69,47 @@ pub fn scaled_bit_depth_16_to_8(png: &PngImage) -> Option<PngImage> {
         .as_chunks::<2>()
         .0
         .iter()
-        .map(|pair| {
-            if pair[0] == pair[1] {
-                return pair[0];
-            }
-            // See: http://www.libpng.org/pub/png/spec/1.2/PNG-Decoders.html#D.Sample-depth-rescaling
-            // This allows values such as 0x00FF to be rounded to 0x01 rather than truncated to 0x00
-            let val = f32::from(u16::from_be_bytes([pair[0], pair[1]]));
-            (val * (255.0 / 65535.0)).round() as u8
-        })
+        .map(|&pair| scaled_16_to_8(pair))
         .collect();
+
+    // Scale the transparency the same way so every pixel that matched it still does
+    let color_type = reduced_trns_16_to_8(&png.ihdr.color_type, |trns| {
+        Some(u16::from(scaled_16_to_8(trns.to_be_bytes())))
+    });
 
     Some(PngImage {
         data,
         ihdr: IhdrData {
-            color_type: png.ihdr.color_type.clone(),
+            color_type,
             bit_depth: BitDepth::Eight,
             ..png.ihdr
         },
     })
+}
+
+/// Scale a 16-bit sample to 8-bit
+fn scaled_16_to_8([high, low]: [u8; 2]) -> u8 {
+    if high == low {
+        return high;
+    }
+    // See: http://www.libpng.org/pub/png/spec/1.2/PNG-Decoders.html#D.Sample-depth-rescaling
+    // This allows values such as 0x00FF to be rounded to 0x01 rather than truncated to 0x00
+    let val = f32::from(u16::from_be_bytes([high, low]));
+    (val * (255.0 / 65535.0)).round() as u8
+}
+
+/// Reduce the transparency of a 16-bit color type to 8-bit, removing it if any channel can't be reduced
+fn reduced_trns_16_to_8(color_type: &ColorType, reduce: impl Fn(u16) -> Option<u16>) -> ColorType {
+    match color_type {
+        ColorType::Grayscale { transparent_shade } => ColorType::Grayscale {
+            transparent_shade: transparent_shade.and_then(&reduce),
+        },
+        ColorType::RGB { transparent_color } => ColorType::RGB {
+            transparent_color: transparent_color
+                .and_then(|t| Some(RGB16::new(reduce(t.r)?, reduce(t.g)?, reduce(t.b)?))),
+        },
+        _ => color_type.clone(),
+    }
 }
 
 /// Attempt to reduce an 8-bit image to a lower bit depth, returning the reduced image if successful

@@ -637,6 +637,32 @@ fn scale_16() {
 }
 
 #[test]
+fn scale_16_trns() {
+    let input = PathBuf::from("tests/files/grayscale_trns_16_should_be_grayscale_trns_8.png");
+    let (output, mut opts) = get_opts(&input);
+    opts.scale_16 = true;
+
+    test_it_converts_callbacks(
+        input,
+        &output,
+        &opts,
+        GRAY,
+        BitDepth::Sixteen,
+        GRAY,
+        BitDepth::Eight,
+        |_| {},
+        |png| {
+            assert_eq!(
+                png.raw.ihdr.color_type,
+                ColorType::Grayscale {
+                    transparent_shade: Some(0x21)
+                }
+            );
+        },
+    );
+}
+
+#[test]
 fn max_size() {
     let result = oxipng::optimize(
         &"tests/files/max_size.png".into(),

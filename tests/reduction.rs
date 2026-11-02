@@ -24,7 +24,7 @@ fn test_it_converts(
     bit_depth_in: BitDepth,
     color_type_out: u8,
     bit_depth_out: BitDepth,
-) {
+) -> ColorType {
     let input = PathBuf::from(input);
     let (output, mut opts) = get_opts(&input);
     opts.optimize_alpha = optimize_alpha;
@@ -53,6 +53,7 @@ fn test_it_converts(
     assert_eq!(png.raw.ihdr.bit_depth, bit_depth_out);
 
     remove_file(output).ok();
+    png.raw.ihdr.color_type.clone()
 }
 
 #[test]
@@ -388,6 +389,42 @@ fn rgb_trns_8_should_be_palette_8() {
         BitDepth::Eight,
         INDEXED,
         BitDepth::Eight,
+    );
+}
+
+#[test]
+fn rgb_trns_16_should_be_rgb_trns_8() {
+    let color_type = test_it_converts(
+        "tests/files/rgb_trns_16_should_be_rgb_trns_8.png",
+        false,
+        RGB,
+        BitDepth::Sixteen,
+        RGB,
+        BitDepth::Eight,
+    );
+    assert_eq!(
+        color_type,
+        ColorType::RGB {
+            transparent_color: Some(RGB16::new(0x21, 0x41, 0x61))
+        }
+    );
+}
+
+#[test]
+fn rgb_trns_16_should_be_rgb_8() {
+    let color_type = test_it_converts(
+        "tests/files/rgb_trns_16_should_be_rgb_8.png",
+        false,
+        RGB,
+        BitDepth::Sixteen,
+        RGB,
+        BitDepth::Eight,
+    );
+    assert_eq!(
+        color_type,
+        ColorType::RGB {
+            transparent_color: None
+        }
     );
 }
 
@@ -964,6 +1001,42 @@ fn grayscale_trns_8_should_be_grayscale_1() {
         BitDepth::Eight,
         GRAYSCALE,
         BitDepth::One,
+    );
+}
+
+#[test]
+fn grayscale_trns_16_should_be_grayscale_trns_8() {
+    let color_type = test_it_converts(
+        "tests/files/grayscale_trns_16_should_be_grayscale_trns_8.png",
+        false,
+        GRAYSCALE,
+        BitDepth::Sixteen,
+        GRAYSCALE,
+        BitDepth::Eight,
+    );
+    assert_eq!(
+        color_type,
+        ColorType::Grayscale {
+            transparent_shade: Some(0x21)
+        }
+    );
+}
+
+#[test]
+fn grayscale_trns_16_should_be_grayscale_8() {
+    let color_type = test_it_converts(
+        "tests/files/grayscale_trns_16_should_be_grayscale_8.png",
+        false,
+        GRAYSCALE,
+        BitDepth::Sixteen,
+        GRAYSCALE,
+        BitDepth::Eight,
+    );
+    assert_eq!(
+        color_type,
+        ColorType::Grayscale {
+            transparent_shade: None
+        }
     );
 }
 
