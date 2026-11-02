@@ -266,9 +266,9 @@ The default value depends on the optimization level preset.")
             Arg::new("fast")
                 .help("Use fast filter evaluation")
                 .long_help("\
-Perform a fast compression evaluation of each enabled filter, followed by a single main \
-compression trial of the best result. Note that this is enabled by default and will only \
-be disabled at level 5 or above.")
+Perform a fast compression evaluation of the enabled filters (on larger images, combined \
+section by section), followed by a single main compression trial of the best result. Note \
+that this is enabled by default and will only be disabled at level 5 or above.")
                 .long("fast")
                 .action(ArgAction::SetTrue),
         )
