@@ -638,7 +638,7 @@ fn scale_16() {
 
 #[test]
 fn scale_16_trns() {
-    let input = PathBuf::from("tests/files/grayscale_trns_16_should_be_grayscale_8.png");
+    let input = PathBuf::from("tests/files/grayscale_trns_16_should_be_grayscale_trns_8.png");
     let (output, mut opts) = get_opts(&input);
     opts.scale_16 = true;
 
@@ -655,7 +655,7 @@ fn scale_16_trns() {
             assert_eq!(
                 png.raw.ihdr.color_type,
                 ColorType::Grayscale {
-                    transparent_shade: None
+                    transparent_shade: Some(0x21)
                 }
             );
         },
