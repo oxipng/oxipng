@@ -44,7 +44,10 @@ fn build_manpages() -> Result<(), Box<dyn Error>> {
     let mut man_file = BufWriter::new(File::create(manpages_dir.join("oxipng.1"))?);
     Man::new(package_cmd)
         .date({
-            let now = UtcDateTime::now()?;
+            let now = match env::var("SOURCE_DATE_EPOCH") {
+                Ok(val) => UtcDateTime::from_timespec(val.parse::<i64>()?, 0)?,
+                Err(_) => UtcDateTime::now()?,
+            };
             format!(
                 "{:04}-{:02}-{:02}",
                 now.year(),
