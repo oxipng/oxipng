@@ -67,15 +67,23 @@ jobs:
           echo "version=$(cargo metadata --format-version 1 --no-deps |
           jq -r '.packages[] | select(.name == "oxipng").version')" >> "$GITHUB_OUTPUT"
 
+      - name: Get the build ID
+        id: build-id
+        uses: $/.github/actions/build-id
+        with:
+          target: ${{ matrix.target }}
+
       - name: Retrieve ${{ matrix.target }} binary
         uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7 # v24
         with:
           workflow: oxipng.yml
           commit: ${{ github.sha }}
-          name: Oxipng binary (${{ matrix.target }})
+          name: ${{ steps.build-id.outputs.artifact-name }}
           path: target
 
       - name: Generate up to date manual
+        env:
+          OXIPNG_BUILD_REVISION: ${{ steps.build-id.outputs.short-sha }}
         run: scripts/manual.sh
 
       - name: Build archives
@@ -83,8 +91,9 @@ jobs:
         env:
           VERSION: ${{ steps.oxipngMeta.outputs.version }}
           TARGET: ${{ matrix.target }}
+          SHORT_SHA: ${{ steps.build-id.outputs.short-sha }}
         run: |
-          ARCHIVE_NAME="oxipng-$VERSION-$TARGET"
+          ARCHIVE_NAME="oxipng-$VERSION-$SHORT_SHA-$TARGET"
 
           mkdir "$ARCHIVE_NAME"
           cp ../CHANGELOG.md ../README.md ../MANUAL.txt "$ARCHIVE_NAME"
