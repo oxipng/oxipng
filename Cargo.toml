@@ -16,7 +16,6 @@ exclude = [
   "tests/*",
   "xtask/*",
 ]
-homepage = "https://github.com/oxipng/oxipng"
 license = "MIT"
 name = "oxipng"
 repository = "https://github.com/oxipng/oxipng"
