@@ -94,7 +94,7 @@ pub struct Options {
     ///
     /// Default: `false`
     pub force: bool,
-    /// Which `FilterStrategy` to try on the file
+    /// Which `FilterStrategy` to try on the file.
     ///
     /// Default: `None,Sub,Entropy,Bigrams`
     pub filters: IndexSet<FilterStrategy>,
@@ -109,46 +109,50 @@ pub struct Options {
     ///
     /// Default: `false`
     pub optimize_alpha: bool,
-    /// Whether to attempt bit depth reduction
+    /// Whether to attempt bit depth reduction.
     ///
     /// Default: `true`
     pub bit_depth_reduction: bool,
-    /// Whether to attempt color type reduction
+    /// Whether to attempt color type reduction.
     ///
     /// Default: `true`
     pub color_type_reduction: bool,
-    /// Whether to attempt palette reduction
+    /// Whether to attempt palette reduction.
     ///
     /// Default: `true`
     pub palette_reduction: bool,
-    /// Whether to attempt grayscale reduction
+    /// Whether to attempt grayscale reduction.
     ///
     /// Default: `true`
     pub grayscale_reduction: bool,
-    /// Whether to perform recoding of IDAT and other compressed chunks
+    /// Whether to perform recoding of IDAT and other compressed chunks.
     ///
     /// If any type of reduction is performed, IDAT recoding will be performed
-    /// regardless of this setting
+    /// regardless of this setting.
     ///
     /// Default: `true`
     pub idat_recoding: bool,
-    /// Whether to forcibly reduce 16-bit to 8-bit by scaling
+    /// Whether to forcibly reduce 16-bit to 8-bit by scaling.
     ///
     /// Default: `false`
     pub scale_16: bool,
-    /// Which chunks to strip from the PNG file, if any
+    /// Which chunks to strip from the PNG file, if any.
     ///
     /// Default: `None`
     pub strip: StripChunks,
-    /// Which DEFLATE (zlib) algorithm to use
+    /// Which DEFLATE (zlib) algorithm to use.
     #[cfg_attr(feature = "zopfli", doc = "(e.g. Zopfli)")]
     ///
     /// Default: `Libdeflater`
     pub deflater: Deflater,
-    /// Whether to use fast evaluation to pick the best filter
+    /// The maximum number of main compression trials to run.
     ///
-    /// Default: `true`
-    pub fast_evaluation: bool,
+    /// Default: `1`
+    pub max_trials: usize,
+    /// The tolerance factor to allow when selecting candidates for trials.
+    ///
+    /// Default: `0.0`
+    pub tolerance: f64,
     /// Maximum amount of time to spend on optimizations.
     /// Further potential optimizations are skipped if the timeout is exceeded.
     ///
@@ -193,6 +197,7 @@ impl Options {
             FilterStrategy::MinSum,
         };
         self.deflater = Deflater::Libdeflater { compression: 5 };
+        self.max_trials = 0;
         self
     }
 
@@ -213,14 +218,12 @@ impl Options {
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
+            FilterStrategy::MinSum,
             FilterStrategy::Entropy,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
-            FilterStrategy::Brute {
-                num_lines: 3,
-                level: 1,
-            },
         };
+        self.deflater = Deflater::Libdeflater { compression: 12 };
         self
     }
 
@@ -228,6 +231,10 @@ impl Options {
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::AVERAGE,
+            FilterStrategy::PAETH,
+            FilterStrategy::MinSum,
             FilterStrategy::Entropy,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
@@ -237,14 +244,19 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 2;
+        self.tolerance = 0.01;
         self
     }
 
     fn apply_preset_5(mut self) -> Self {
-        self.fast_evaluation = false;
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::AVERAGE,
+            FilterStrategy::PAETH,
+            FilterStrategy::MinSum,
             FilterStrategy::Entropy,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
@@ -254,11 +266,12 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 6;
+        self.tolerance = 0.03;
         self
     }
 
     fn apply_preset_6(mut self) -> Self {
-        self.fast_evaluation = false;
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
@@ -275,6 +288,8 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 16;
+        self.tolerance = 0.05;
         self
     }
 }
@@ -301,7 +316,8 @@ impl Default for Options {
             scale_16: false,
             strip: StripChunks::None,
             deflater: Deflater::Libdeflater { compression: 11 },
-            fast_evaluation: true,
+            max_trials: 1,
+            tolerance: 0.0,
             timeout: None,
             max_decompressed_size: None,
         }

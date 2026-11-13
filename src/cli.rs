@@ -42,14 +42,13 @@ pub fn build_command() -> Command {
 Set the optimization level preset. The default level 2 is quite fast and provides good \
 compression. Lower levels are faster, higher levels provide better compression, though \
 with increasingly diminishing returns.
-
-    0   => --zc 5  -f 0,5         --fast
-    1   => --zc 10 -f 0,7         --fast
-    2   => --zc 11 -f 0,1,6,7     --fast
-    3   => --zc 11 -f 0,1,6,7,8,9 --fast --brute-level 1 --brute-lines 3
-    4   => --zc 12 -f 0,1,6,7,8,9 --fast --brute-level 1 --brute-lines 4
-    5   => --zc 12 -f 0,1,6,7,8,9        --brute-level 1 --brute-lines 8
-    6   => --zc 12 -f 0-9                --brute-level 5 --brute-lines 8
+    0   => --zc 5  --max-trials 0  -f 0,5
+    1   => --zc 10 --max-trials 1  -f 0,7
+    2   => --zc 11 --max-trials 1  -f 0,1,6,7
+    3   => --zc 12 --max-trials 1  -f 0,1,5,6,7,8
+    4   => --zc 12 --max-trials 2  -f 0-9 --tolerance 1 --brute-level 1 --brute-lines 4
+    5   => --zc 12 --max-trials 6  -f 0-9 --tolerance 3 --brute-level 1 --brute-lines 8
+    6   => --zc 12 --max-trials 16 -f 0-9 --tolerance 5 --brute-level 5 --brute-lines 8
     max => (stable alias for the maximum level)
 
 Manually specifying a compression option (zc, f, etc.) will override the value in the \
@@ -240,8 +239,8 @@ losslessly.")
             Arg::new("filters")
                 .help("Filters to try (0-9; see '--help' for details)")
                 .long_help("\
-Perform compression trials with each of the given filter types. You can specify a \
-comma-separated list, or a range of values. E.g. '-f 0-3' is the same as '-f 0,1,2,3'.
+Evaluate each of the given filter types. You can specify a comma-separated list, or a \
+range of values. E.g. '-f 0-3' is the same as '-f 0,1,2,3'.
 
 PNG delta filters (apply the same filter to every line)
     0  =>  None      (recommended to always include this filter)
@@ -263,14 +262,24 @@ The default value depends on the optimization level preset.")
                 .value_name("list"),
         )
         .arg(
-            Arg::new("fast")
-                .help("Use fast filter evaluation")
+            Arg::new("max-trials")
+                .help("Maximum number of main compression trials to run")
                 .long_help("\
-Perform a fast compression evaluation of each enabled filter, followed by a single main \
-compression trial of the best result. Note that this is enabled by default and will only \
-be disabled at level 5 or above.")
-                .long("fast")
-                .action(ArgAction::SetTrue),
+Maximum number of main compression trials to run. If set to 0, only fast evaluations will \
+be performed.")
+                .long("max-trials")
+                .value_name("num")
+                .value_parser(value_parser!(usize))
+        )
+        .arg(
+            Arg::new("tolerance")
+                .long_help("\
+Tolerance factor to allow when selecting candidates for main compression trials. A higher \
+value may result in more trials being performed (up to the max allowed). A lower value \
+will skip candidates that are deemed less likely to yield better compression.")
+                .long("tolerance")
+                .value_name("percentage")
+                .value_parser(0..=100)
         )
         .arg(
             Arg::new("compression")
@@ -349,7 +358,8 @@ be processed successfully. The output will always have correct checksums.")
                 .help("Use the much slower but stronger Zopfli compressor")
                 .long_help("\
 Use the much slower but stronger Zopfli compressor for main compression trials. \
-Recommended use is with '-o max' and '--fast'.")
+Recommended use is with the max optimization level but with a low number of trials.
+E.g.: '-o max --zopfli --max-trials 2 --tolerance 1'.")
                 .short('z')
                 .short_alias('Z') // Kept for backwards compatibility
                 .long("zopfli")

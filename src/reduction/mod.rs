@@ -19,16 +19,15 @@ pub(crate) fn perform_reductions(
     deadline: &Deadline,
     eval: &Evaluator,
 ) -> Arc<PngImage> {
-    let mut evaluation_added = false;
+    let mut eval_nth = 0;
 
-    // Try to infer the optimization level from the settings
-    // TODO: [v11] Store the level in the settings
+    // Infer an effort level from the settings, matching the standard optimization levels
     let effort = match opts.deflater {
         Deflater::Libdeflater { compression } => match compression {
             0..=9 => 0,
             10 => 1,
-            11 if opts.filters.len() <= 4 => 2,
-            11 => 3,
+            11 => 2,
+            12 if opts.max_trials <= 1 => 3,
             _ => 4,
         },
         _ => 4,
@@ -93,8 +92,8 @@ pub(crate) fn perform_reductions(
         }
         // If either action changed the data then enter this into the evaluator
         if !Arc::ptr_eq(&png, &baseline) {
-            eval.try_image_with_description(png.clone(), "Indexed (luma sort)");
-            evaluation_added = true;
+            eval_nth += 1;
+            eval.try_image_with_name(png.clone(), eval_nth, "Indexed (luma sort)");
         }
     }
 
@@ -107,8 +106,8 @@ pub(crate) fn perform_reductions(
         // For small differences, if a tRNS chunk is required then enter this into the evaluator
         // Otherwise it is mostly just removal of bytes and should become the baseline
         if png.ihdr.color_type.has_trns() && baseline.data.len() - png.data.len() <= 1000 {
-            eval.try_image(png.clone());
-            evaluation_added = true;
+            eval_nth += 1;
+            eval.try_image(png.clone(), eval_nth);
         } else {
             baseline = png.clone();
         }
@@ -123,8 +122,8 @@ pub(crate) fn perform_reductions(
             indexed_to_channels(&png, opts.grayscale_reduction, opts.optimize_alpha)
     {
         // This result should not be passed on to subsequent reductions
-        eval.try_image(Arc::new(reduced));
-        evaluation_added = true;
+        eval_nth += 1;
+        eval.try_image(Arc::new(reduced), eval_nth);
     }
 
     // Attempt to reduce to indexed
@@ -139,8 +138,8 @@ pub(crate) fn perform_reductions(
         // For relatively small differences, enter this into the evaluator
         // Otherwise we're confident enough for it to become the baseline
         if png.data.len() - new.data.len() <= INDEXED_MAX_DIFF {
-            eval.try_image_with_description(new.clone(), "Indexed (luma sort)");
-            evaluation_added = true;
+            eval_nth += 1;
+            eval.try_image_with_name(new.clone(), eval_nth, "Indexed (luma sort)");
         } else {
             baseline = new.clone();
         }
@@ -166,19 +165,19 @@ pub(crate) fn perform_reductions(
                 && !palettes.contains(&reduced.ihdr.color_type)
             {
                 palettes.push(reduced.ihdr.color_type.clone());
-                eval.try_image_with_description(Arc::new(reduced), "Indexed (ezeng sort)");
-                evaluation_added = true;
+                eval_nth += 1;
+                eval.try_image_with_name(Arc::new(reduced), eval_nth, "Indexed (ezeng sort)");
             }
 
             // Attempt to sort the palette using the battiato method
-            if effort >= 4
+            if effort >= 3
                 && !deadline.passed()
                 && let Some(reduced) = sorted_palette_battiato(input, &matrix)
                 && !palettes.contains(&reduced.ihdr.color_type)
             {
                 palettes.push(reduced.ihdr.color_type.clone());
-                eval.try_image_with_description(Arc::new(reduced), "Indexed (battiato sort)");
-                evaluation_added = true;
+                eval_nth += 1;
+                eval.try_image_with_name(Arc::new(reduced), eval_nth, "Indexed (battiato sort)");
             }
         }
     }
@@ -194,18 +193,20 @@ pub(crate) fn perform_reductions(
             && let Some(indexed) = indexed.and_then(|png| reduced_bit_depth_8_or_less(&png))
             && reduced.as_ref().is_none_or(|r| r.data != indexed.data)
         {
-            eval.try_image(Arc::new(indexed));
-            evaluation_added = true;
+            eval_nth += 1;
+            eval.try_image(Arc::new(indexed), eval_nth);
         }
         // Enter the first result into the evaluator
         if let Some(reduced) = reduced {
-            eval.try_image(Arc::new(reduced));
-            evaluation_added = true;
+            eval_nth += 1;
+            eval.try_image(Arc::new(reduced), eval_nth);
         }
     }
 
-    if evaluation_added {
-        eval.try_image(baseline.clone());
+    if eval_nth > 0 {
+        // Baseline always has the lowest nth value. This ensures that multiple runs of the same
+        // image won't flip-flip between different formats that compare equal.
+        eval.try_image(baseline.clone(), 0);
     }
     baseline
 }

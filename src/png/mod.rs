@@ -263,6 +263,13 @@ impl PngImage {
         Ok(image)
     }
 
+    #[must_use]
+    pub fn is_same_format(&self, other: &Self) -> bool {
+        self.ihdr.color_type == other.ihdr.color_type
+            && self.ihdr.bit_depth == other.ihdr.bit_depth
+            && self.ihdr.interlaced == other.ihdr.interlaced
+    }
+
     /// Return the number of channels in the image, based on color type
     #[inline]
     #[must_use]
