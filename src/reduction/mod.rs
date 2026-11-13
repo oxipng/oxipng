@@ -21,14 +21,13 @@ pub(crate) fn perform_reductions(
 ) -> Arc<PngImage> {
     let mut eval_nth = 0;
 
-    // Try to infer the optimization level from the settings
-    // TODO: [v11] Store the level in the settings
+    // Infer an effort level from the settings, matching the standard optimization levels
     let effort = match opts.deflater {
         Deflater::Libdeflater { compression } => match compression {
             0..=9 => 0,
             10 => 1,
-            11 if opts.filters.len() <= 4 => 2,
-            11 => 3,
+            11 => 2,
+            12 if opts.max_trials <= 1 => 3,
             _ => 4,
         },
         _ => 4,
@@ -171,7 +170,7 @@ pub(crate) fn perform_reductions(
             }
 
             // Attempt to sort the palette using the battiato method
-            if effort >= 4
+            if effort >= 3
                 && !deadline.passed()
                 && let Some(reduced) = sorted_palette_battiato(input, &matrix)
                 && !palettes.contains(&reduced.ihdr.color_type)

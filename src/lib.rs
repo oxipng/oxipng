@@ -398,7 +398,7 @@ fn optimize_raw(
     // 10 and higher are quite slow - good for filters but only good for reductions if matching the main zc level
     let compression = match opts.deflater {
         Deflater::Libdeflater { compression } if compression < 11 => 5.min(compression),
-        _ if opts.filters.len() <= 4 => 7,
+        _ if opts.max_trials <= 1 => 7,
         _ => 8,
     };
     let eval_deflater = Deflater::Libdeflater { compression };

@@ -218,14 +218,12 @@ impl Options {
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
+            FilterStrategy::MinSum,
             FilterStrategy::Entropy,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
-            FilterStrategy::Brute {
-                num_lines: 3,
-                level: 1,
-            },
         };
+        self.deflater = Deflater::Libdeflater { compression: 12 };
         self
     }
 
@@ -233,6 +231,10 @@ impl Options {
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::AVERAGE,
+            FilterStrategy::PAETH,
+            FilterStrategy::MinSum,
             FilterStrategy::Entropy,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
@@ -242,6 +244,8 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 2;
+        self.tolerance = 0.01;
         self
     }
 
@@ -249,6 +253,10 @@ impl Options {
         self.filters = indexset! {
             FilterStrategy::NONE,
             FilterStrategy::SUB,
+            FilterStrategy::UP,
+            FilterStrategy::AVERAGE,
+            FilterStrategy::PAETH,
+            FilterStrategy::MinSum,
             FilterStrategy::Entropy,
             FilterStrategy::Bigrams,
             FilterStrategy::BigEnt,
@@ -258,6 +266,8 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 6;
+        self.tolerance = 0.03;
         self
     }
 
@@ -278,6 +288,8 @@ impl Options {
             },
         };
         self.deflater = Deflater::Libdeflater { compression: 12 };
+        self.max_trials = 16;
+        self.tolerance = 0.05;
         self
     }
 }
