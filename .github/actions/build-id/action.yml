@@ -1,0 +1,28 @@
+name: Build ID
+description: Compute the short commit hash and the CI binary artifact name
+
+inputs:
+  target:
+    description: Rust target triple the binary is built for
+    required: true
+
+outputs:
+  short-sha:
+    description: The first 7 characters of the commit hash
+    value: ${{ steps.build-id.outputs.short-sha }}
+  artifact-name:
+    description: The name of the CI binary artifact for the target
+    value: ${{ steps.build-id.outputs.artifact-name }}
+
+runs:
+  using: composite
+  steps:
+    - id: build-id
+      shell: bash
+      env:
+        COMMIT_SHA: ${{ github.sha }}
+        TARGET: ${{ inputs.target }}
+      run: |
+        SHORT_SHA="${COMMIT_SHA::7}"
+        echo "short-sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+        echo "artifact-name=Oxipng binary ($TARGET, $SHORT_SHA)" >> "$GITHUB_OUTPUT"

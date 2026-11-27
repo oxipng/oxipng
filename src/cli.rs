@@ -15,6 +15,22 @@ const STYLES: Styles = Styles::styled()
     .literal(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
     .placeholder(AnsiColor::Cyan.on_default());
 
+// Set at build time by CI to the commit the binary was built from
+const BUILD_REVISION: Option<&str> = option_env!("OXIPNG_BUILD_REVISION");
+
+// An empty value counts as unset, so CI can pass one conditionally
+fn build_revision() -> Option<&'static str> {
+    BUILD_REVISION.filter(|revision| !revision.is_empty())
+}
+
+// The package version, suffixed with the commit it was built from if known
+pub fn version() -> String {
+    build_revision().map_or_else(
+        || env!("CARGO_PKG_VERSION").to_owned(),
+        |revision| format!("{} ({revision})", env!("CARGO_PKG_VERSION")),
+    )
+}
+
 pub fn build_command() -> Command {
     // Note: clap 'wrap_help' is enabled to automatically wrap lines according to terminal width.
     // To keep things tidy though, short help descriptions should be no more than 54 characters,
@@ -22,7 +38,7 @@ pub fn build_command() -> Command {
     // Long help descriptions are soft wrapped here at 90 characters (column 91) but this does not
     // affect output, it simply matches what is rendered when help is output to a file.
     Command::new(env!("CARGO_PKG_NAME"))
-        .version(env!("CARGO_PKG_VERSION"))
+        .version(version())
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .styles(STYLES)
